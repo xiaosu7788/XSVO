@@ -1,0 +1,6 @@
+services:
+  docs:
+    image: ghcr.io/xsvo/xsvo-main-docs:latest
+    ports:
+      - "3001:3000"
+    restart: unless-stopped

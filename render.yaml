@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: xsvo-main
+    runtime: docker
+    plan: free
+    autoDeployTrigger: off
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
+      - key: UV_THREADPOOL_SIZE
+        value: "2"
+      - key: XSVO_DATA_DIR
+        value: /app/web/.data
+      - key: VOZEB_DATA_DIR
+        value: /app/web/.data
+      - key: XSVO_INTERNAL_ORIGIN
+        value: http://127.0.0.1:4000
+      - key: VOZEB_INTERNAL_ORIGIN
+        value: http://127.0.0.1:4000

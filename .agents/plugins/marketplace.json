@@ -1,0 +1,20 @@
+{
+  "name": "xsvo-canvas-local",
+  "interface": {
+    "displayName": "XSVO Canvas"
+  },
+  "plugins": [
+    {
+      "name": "xsvo-canvas",
+      "source": {
+        "source": "local",
+        "path": "./plugins/xsvo-canvas"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

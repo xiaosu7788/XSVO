@@ -1,0 +1,26 @@
+services:
+  app:
+    image: xsvo-main:local
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xsvo-main
+    ports:
+      - "${XSVO_BIND_HOST:-0.0.0.0}:4000:4000"
+    volumes:
+      - xsvo-main-data:/app/web/.data
+    environment:
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+      NEXT_PUBLIC_DOC_URL: ${NEXT_PUBLIC_DOC_URL:-}
+      XSVO_COOKIE_SECURE: ${XSVO_COOKIE_SECURE:-}
+      VOZEB_COOKIE_SECURE: ${VOZEB_COOKIE_SECURE:-}
+      XSVO_DATA_DIR: /app/web/.data
+      VOZEB_DATA_DIR: /app/web/.data
+      XSVO_INTERNAL_ORIGIN: http://127.0.0.1:4000
+      VOZEB_INTERNAL_ORIGIN: http://127.0.0.1:4000
+      NEXT_TELEMETRY_DISABLED: "1"
+    restart: unless-stopped
+
+volumes:
+  xsvo-main-data:

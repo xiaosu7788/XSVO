@@ -1,0 +1,79 @@
+---
+title: 寰呮祴璇?
+description: 褰撳墠鐗堟湰宸插疄鐜颁絾浠嶉渶浜哄伐楠岃瘉鐨勫彉鏇撮」
+---
+
+# 寰呮祴璇?
+
+- 生图工作台 Agent 提示词展示清理：`/image` 宿主页在修正任务卡模型标签时，同步清理画廊任务卡片中由 Agent 引用图片生成的 `<ref ... />` 标签展示；展示层只保留最后一个引用标签之后的用户自然语言输入，例如 `生成一只小狗 <ref ... /> 小狗在草坪上 <ref ... /> 小狗旁边还有一只小猫` 在卡片上显示为“小狗旁边还有一只小猫”。该清理只作用于 iframe DOM 展示，不改写 Agent 请求上下文和本地任务数据。需要人工验证 Agent 连续引用前轮图片生成后，画廊卡片不再显示 `<ref id=... prompt=... />` 代码标签，图片引用仍可正常参与生成。
+- 生图工作台模式切换按钮恢复：`/image` 宿主页继续把 GPT Image Playground 原生“画廊 / Agent”切换器固定到左上角标题区域，并恢复桌面端和移动端的“画廊 / Agent”切换按钮渲染；同步刷新 `/image` iframe URL、静态入口资源 query 和 service worker 缓存版本到 `xsvo-0.1.1-native-api-mode-6-agent-hookfix-7`，避免旧缓存导致按钮首帧闪现。需要人工验证刷新 `/image` 后，截图红框位置应稳定显示“画廊 / Agent”文字按钮，并可正常切换模式，右上角“查看提示词库 / 查看我的素材 / 操作指南 / 设置”等按钮仍正常。
+- 生图工作台 Agent 功能修复：`/image` 桥接层存在两个导致 Agent 模式不可用的问题。其一，`syncPlaygroundSettings` 每次同步配置时都用 `activeProfile?.apiMode` 强制覆盖顶层 `apiMode`，而 `buildHostProfiles` 对所有图片模型 profile 设置的是 `"images"`，导致用户在 Playground 设置中把 `API 接口` 切换为 `Responses API` 后，下一次宿主同步会把它改回 `Images API`，Agent 模式因 `apiMode !== "responses"` 无法启用；现已改为通过 `normalizeApiMode(previousSettings.apiMode, activeProfile?.apiMode || settings.apiMode)` 保留用户之前的选择。其二，`correctPlaygroundTaskModelBadges` 的 MutationObserver 监听了 `characterData: true` 且在回调中同步执行 `chip.remove()` 和 `setTaskModelChipText` 修改文本节点，当 Agent 模式发送消息渲染任务卡片时，这些 DOM 修改会在 React 渲染过程中干扰 playground 内部组件，触发 ErrorBoundary 弹出“工作台渲染异常”；现已移除 `characterData` 监听并改为通过 `requestAnimationFrame` 延迟执行 DOM 修正，避免在 React 渲染过程中修改 DOM。其三，`applyPlaygroundHeaderChrome`（`removePlaygroundInstallButton` 会 `div.relative.remove()`、`movePlaygroundModeTabsToTitleSlot` 会 `h1.remove()`）、`installPlaygroundPromptExpander`（`hideNativePromptExpandButtons` 修改原生按钮 style 且 MutationObserver 带 `characterData: true`）、`injectButton`（向任务卡片 span 注入"加入素材"按钮）三个 useEffect 在 Agent 模式下仍通过 MutationObserver 修改 playground DOM，与流式渲染冲突触发 ErrorBoundary；现已为这三处 useEffect 回调和函数入口统一加 `isPlaygroundInAgentMode()` 守卫，Agent 模式下跳过所有宿主级 DOM 注入/调整。其四，fetch/XHR 桥接层在 Agent 模式下仍会拦截并处理所有请求/响应，可能干扰 Responses API 的流式传输；现已在 fetch 和 XHR 桥接层加 `isPlaygroundInAgentMode()` 守卫，Agent 模式下完全透传，不做任何请求重写或响应处理。其五，`applyPlaygroundHeaderChrome` 的 Agent 模式守卫导致 Agent 模式发送消息后 playground 重渲染 header 时"GPT Image Playground"标题按钮重新出现且画廊/Agent 标签被挤到右边；现已去掉该守卫，将 `removePlaygroundInstallButton` 和 `movePlaygroundModeTabsToTitleSlot` 中的 `remove()` 改为 `display: none`（不破坏 React DOM 树），MutationObserver 回调改为通过 `requestAnimationFrame` 延迟执行，`installPlaygroundModelPicker` 的 Agent 模式清理也改为 `display: none`。需要人工验证：刷新 `/image`（如仍弹渲染异常，先在浏览器控制台执行 `localStorage.removeItem("gpt-image-playground")` 清除旧的损坏数据再刷新）后，打开设置面板 `API 配置` 中 `API 接口` 选择器可见且可切换为 `Responses API`，切换后不会被宿主同步改回，进入 Agent 模式发送消息工作台不再弹出渲染异常，且 header 中"GPT Image Playground"标题按钮不出现、画廊/Agent 标签保持在左侧。
+
+- 生图工作台 API 接口选择器恢复：刷新 `web/public/gpt-image-playground` 静态包缓存版本到 `xsvo-0.1.1-native-api-mode-6`，确保 `/image` 加载当前入口包；当前静态包内原生 `API 接口` 选择器位于“设置 -> API 配置”中，并显示在“流式传输”上方，工作台外层不再额外放置 API 接口选择器；同时为 Agent 模式增加 DOM 移除/插入安全兜底和紧凑恢复保护，避免单条异常对话状态导致整个工作台空白或出现大块恢复弹窗。需要人工验证刷新 `/image` 后打开设置面板，API 配置中可切换 `Images API (/v1/images)` / `Responses API (/v1/responses)`，底部工作台外层只保留模型选择与积分提示，Agent 发送消息后工作台不再消失。
+
+- 版本号与版本更新记录重置：根目录 `VERSION`、`web/package.json`、README 版本展示和前端兜底版本号统一调整为 `v0.1.1`，`CHANGELOG.md` 清空旧版本记录，仅保留 `Unreleased` 和 `v0.1.1` 当前记录。需要人工验证右上角版本入口、版本更新弹窗、首页版本徽标和 README 版本展示均为 `v0.1.1`，弹窗不再显示旧版本历史。
+
+- 管理后台导航精简：删除 `/admin` 内容区顶部重复的“管理员后台 / 返回画布”标题卡，桌面端左侧后台功能导航直接固定在全局顶栏下方，菜单超过视口高度时在导航内部独立滚动；管理员右上角账户菜单在普通页面显示“管理员后台”，进入后台后同一入口自动改为“返回画布”。需要人工验证后台各栏目长页面滚动时左侧导航保持可见，账户菜单可在后台返回 `/canvas`，普通页面仍可进入 `/admin`，浅色/深色主题及移动端布局正常。
+
+- 提示词源与提示词筛选：后台“提示词库”新增提示词源列表，可查看各来源 URL、类型、条数、同步时间，并启用或停用内置提示词源；用户端 `/api/prompts` 会按启用来源返回数据，生图工作台“查看提示词库”弹窗与独立 `/prompts` 提示词中心统一为搜索 + 来源 + 标签类型选择结构，外层不再铺开全部分类和标签，弹窗卡片使用紧凑模式并保留来源标签；下拉框选中项改为浅灰高对比样式，标签下拉使用固定高度的真实滚动区域。需要人工验证后台停用/启用某个内置词源后，`/image` 弹窗和 `/prompts` 展示范围同步变化，两处来源/标签类型筛选、标签下拉滚轮与滚动条、滚动加载、使用提示词插入、复制、加入素材和手动添加公共提示词仍正常。
+
+- 主应用默认端口调整：本地开发脚本、Dockerfile、Compose、Render 配置、内部回源地址、部署 Nginx 模板、README 和主应用文档中的默认访问端口从 `3000` 调整为 `4000`，用于避开本机已有 3000 端口占用。需要人工验证 `cd web && pnpm run dev` 后可访问 `http://localhost:4000`，Docker 部署暴露 `4000:4000`，反向代理模板转发到 `127.0.0.1:4000`，文档站自身 `3001:3000` 映射不受影响。
+
+- 生图工作台 0.7.0 增量融合：`/image` 保持现有 XSVO 二开桥接、积分、渠道模型下拉、素材/提示词插入和任务模型标签修正，同时让新版长提示词展开按钮在提示词超过两行、文本较长或输入框溢出时稳定显示；同步配置时保留全部 OpenAI 兼容 profile 给新版 Agent 独立 API 配置使用，非图片模型标记为 `responses`，底部生图模型下拉仍只展示图片模型；系统渠道默认生图模型兜底也限定为图片模型。需要人工验证长提示词可展开/恢复，移动端展开不遮挡参数区，Agent 设置中可选择文本/图片独立配置，底部模型选择仍只显示图片模型，积分预估、生成请求渠道、素材加入和任务卡片模型标签不回退。
+
+- 生图工作台 0.7.0 桥接融合：确认当前 `web/public/gpt-image-playground` 静态工作台已包含参考项目 0.7.0 的收藏集合、遮罩编辑、自定义服务商、fal.ai、Agent 配置、右键菜单和批量下载能力；`/image` 宿主桥接同步配置时补齐 0.7.0 新增的 `allowPromptRewrite`、`agentApiConfigMode`、`agentTextProfileId`、`agentImageProfileId` 等字段，并改用新版合法的 `zipDownloadRoutes`，同时保留用户在 playground 内已设置的提示词改写、任务通知、Agent、收藏和下载偏好。需要人工验证刷新 `/image` 后设置面板中新版开关不被重置，收藏集合/遮罩编辑/批量下载/Agent 仍可使用，且 XSVO 渠道模型下拉、积分预估、素材插入和任务模型标签保持正常。
+- 生图参考图请求压缩回归修复：补回 `/image` 桥接层缺失的 `compressPlaygroundRequestFormData`，带参考图的 multipart 请求不再因 `ReferenceError` 在浏览器内直接中断；普通上传和从素材库插入的参考图默认保持原图，不再按单图大小自动压缩。仅当一次请求中的图片文件总量超过 `100MB` 时，对长边超过 `2400px` 的普通参考图进行兜底缩放，遮罩文件保持原格式以保留透明信息。需要人工验证文生图、单张参考图、多张参考图和遮罩编辑均可正常提交，普通参考图的文件大小与尺寸不被修改，浏览器控制台不再出现 `compressPlaygroundRequestFormData is not defined`。
+- 生图上游文字响应提示：系统渠道代理和 `/image` 直连渠道桥接遇到 `upstream_text_reply` / `The upstream service returned text instead of an image.` 时，会保留原 HTTP 状态和错误码，并将英文错误转换为明确中文说明，提示本次上游未产出图片、可能被拒绝或账号暂时不可用；系统渠道失败仍会退回本次积分。需要人工验证同类失败不再显示英文原文，积分余额恢复正常，其他上游错误保持原样透传。
+- 生图工作台 413 错误提示修复：`/api/ai/system/[channelId]` 代理收到上游 413 时会回滚本次积分并返回明确 JSON 错误，不再透传 Nginx HTML；`/image` iframe fetch 桥接层也会把直连渠道返回的 413 HTML 归一化为“请求体过大”提示，playground 内部错误兜底也不再给 413 追加“流式传输不支持”提示。参考图默认保持原图，仅对总图片文件超过 `100MB` 的极端请求进行兜底缩放。需要人工验证上传较大参考图或触发渠道 413 时，页面只提示请求体过大并指向减少参考图/调整 Nginx `client_max_body_size`，且积分不会被扣除。
+- Nginx 请求体限制配置：`deploy/nginx/xsvo.conf` 和 `deploy/nginx/README.md` 示例反向代理把 `client_max_body_size` 调整为 `500m`，并保留 600 秒代理读写超时，用于解决宿主机 Nginx 默认限制导致的生图 413。需要人工验证服务器复制配置、替换域名、`nginx -t` 和 reload 后，大参考图请求不再被宿主机 Nginx 拦截。
+
+- 生图工作台渠道选择修复：`/image` 的 GPT Image Playground iframe 桥接层在拦截 `fetch(Request)` 形式的生图请求时，会读取并重写 Request body 中的 `model` 字段，同时按当前选中的 profile 重写 Base URL 和 Authorization；跨 iframe 的 `FormData`、`URLSearchParams` 也改为结构判断，避免模型/渠道没有被替换或 multipart 头部 boundary 错误。当前 `[模型 · 渠道]` 选择新增 XSVO 宿主级持久化和页面会话内存兜底，生成后即使 playground 内部状态写回默认 profile，也会被宿主定时纠正回用户选择，下拉显示、预计积分和下一次请求仍优先使用宿主保存的选择；任务卡片模型标签会按实际请求 profile 做展示修正，避免网络请求已走所选模型但卡片仍显示默认模型。需要人工验证配置多个 OpenAI 兼容图片渠道后，切换底部模型下拉并发送生成，请求实际命中所选 `/api/ai/system/[channelId]`，且生成中卡片和生成完成卡片显示的模型标签与所选模型一致。
+
+- 生图工作台模型选择：`/image` 同步 GPT Image Playground 配置时，将每个 OpenAI 兼容图片渠道按“渠道 + 模型”拆成可选 profile，并在底部发送区按参考图样式插入“模型”浮层下拉和浅色预计积分胶囊；新增渠道里的 `gemini-flash`、`gpt-image-2`、`Nano Banana` 等 `/v1/images` 图片模型可以无刷新切换，生成请求会由 iframe fetch 桥接层按当前选择重写 Base URL、Authorization 和 `model` 字段；旧的渠道级 profile 会从托管配置中清理，避免新增接口后仍停留在旧渠道。需要人工验证后台新增 OpenAI 兼容 `/v1/images` 渠道并填写多个模型后，刷新 `/image` 可在模型下拉看到并切换，生成请求走对应 `/api/ai/system/[channelId]` 或自定义 Base URL，预计积分按当前模型和数量更新。
+
+- 用户端侧边导航：将桌面端顶部“我的画布 / 生图工作台 / 视频创作台 / 提示词库 / 我的提示词 / 我的素材”胶囊导航移到左侧侧边栏，顶部栏只保留品牌、移动端菜单和右侧用户操作；侧边栏展开宽度收窄，并新增可持久化的收起/展开按钮，收起后只保留图标列；移动端继续使用抽屉导航，画布详情页继续隐藏应用导航。需要人工验证 `/canvas`、`/image`、`/video`、`/prompts`、`/my-prompts`、`/assets` 的侧边栏高亮和跳转正常，收起/展开状态刷新后保持，移动端不出现桌面侧边栏。
+
+- 首页/登录样式修复：补充 Tailwind v4 源文件扫描范围，修正登录注册组件损坏的中文文案和 JSX 结构，并给首页、登录页、首页登录弹窗关键布局增加页面级兜底 CSS，避免热更新或工具类产物异常时退化成浏览器默认裸排版。需要人工验证 `/`、`/login`、`/register` 在浅色/深色模式和移动端下布局正常，首页“进入工作台”弹出的登录窗与独立登录注册页视觉一致，登录/注册提交不受影响。
+
+- 首页视觉重做：`/` 首页首屏从通用玻璃拟态改为更强烈的 Studio Board 创作操作台视觉，右侧预览区接入提示词封面图、工具矩阵和工作流轨道，整体改用硬朗网格、实体色块、编辑式标题和更明确的 CTA 层级；提示词作品区同步改为深色作品墙。需要人工验证浅色/深色主题、桌面首屏、移动端首屏、提示词预览点击、主题切换和“进入工作台”登录弹窗是否正常。
+
+- 参考 v1.0.0 融合：保留 XSVO-main 品牌、首页/登录页定制和当前桥接生图工作台，补齐 Next.js 16.2.6、PostCSS override、`reset:admin-password`、`check:release`、Docker/Compose/Render 内部回源配置、`XSVO_*` 与 `VOZEB_*` 环境变量兼容，以及 `xsvo-canvas` 本地 Agent 配置迁移。需要人工验证容器部署后异步生图/媒体代理可正常回源，管理员密码重置脚本能读取 `.data/auth.json`，`xsvo-canvas` 能读取旧 `infinite-canvas` 配置并连接画布。
+
+- 鐢熷浘宸ヤ綔鍙拌祫婧愭彃鍏ワ細`/image` 鎸傝浇 GPT Image Playground 鍚庯紝椤堕儴鍙充晶鏂板鈥滄煡鐪嬫彁绀鸿瘝搴撯€濆拰鈥滄煡鐪嬫垜鐨勭礌鏉愨€濇寜閽紱鐐瑰嚮鎻愮ず璇嶅簱鍙€夋嫨鍏叡鎻愮ず璇嶅苟鎻掑叆鍒板簳閮ㄧ敓鍥剧紪杈戞锛岀偣鍑绘垜鐨勭礌鏉愬彲閫夋嫨鏂囨湰绱犳潗鎻掑叆鎻愮ず璇嶃€侀€夋嫨鍥剧墖绱犳潗鍔犲叆 playground 鍙傝€冨浘锛岃棰戠礌鏉愪細鎻愮ず褰撳墠涓嶆敮鎸併€傞渶瑕佷汉宸ラ獙璇佷袱涓寜閽綅浜庨《閮ㄥ彸渚ф搷浣滃尯鍓嶆柟锛屽脊绐楀彲鎵撳紑锛屾彁绀鸿瘝/鏂囨湰绱犳潗鑳藉啓鍏ュ綋鍓嶇紪杈戞锛屽浘鐗囩礌鏉愯兘鍑虹幇鍦ㄥ弬鑰冨浘鍒楄〃涓斿悗缁敓鎴愯姹傚彲姝ｅ父鎼哄甫銆?
+- 鐢熷浘宸ヤ綔鍙扮Н鍒嗘ˉ鎺ワ細`/image` 閲岀殑 GPT Image Playground 浣跨敤骞冲彴榛樿鎺ュ彛鏃讹紝璇锋眰浼氱户缁蛋 `/api/ai/system/[channelId]` 鍚庣浠ｇ悊鎵ｇН鍒嗭紱椤甸潰浼氬湪 iframe 鍚屾簮 fetch 杩斿洖 `x-xsvo-points-remaining` 鍚庣珛鍗冲埛鏂伴《閮ㄥ鑸綑棰濓紝骞朵繚鐣欏彲瑙佹椂鐨?session 鍒锋柊鍏滃簳锛涘伐浣滃彴鍙戦€佹寜閽梺鏂板鈥滈璁?X 绉垎鈥濊兌鍥婏紝涓嶅啀棰濆鏄剧ず鍙充笂瑙掍綑棰濇诞灞傘€傞渶瑕佷汉宸ラ獙璇佺敓鍥?缂栬緫鎵ｅ垎銆侀《閮ㄤ綑棰濆埛鏂般€侀璁℃秷鑰楀拰绉垎璁板綍銆?
+- 鐢熷浘宸ヤ綔鍙拌缃脊绐楋細`/image` API 閰嶇疆椤垫敼涓轰粠 playground 婧?JSX 鏉′欢涓嶆覆鏌撻噸澶嶇殑娓犻亾/杩炴帴閰嶇疆鍧楋紝涓嶅啀浣跨敤 `display:none` 鎴?DOM `remove()`锛涗繚鐣欐祦寮忎紶杈撱€佽姹備腑闂存楠ゅ浘鍍忔暟銆佽繑鍥?Base64 鍥剧墖鏁版嵁銆丆odex CLI 鍏煎妯″紡鍜岃姹傝秴鏃躲€傞渶瑕佷汉宸ラ獙璇佹墦寮€璁剧疆鏃舵病鏈夐厤缃潡鍏堝嚭鐜板啀娑堝け锛岄珮绾ч€夐」鍙慨鏀瑰苟鍒锋柊淇濈暀銆?
+- 鐢熷浘宸ヤ綔鍙版笭閬撳悓姝ヤ慨姝ｏ細`/image` 鍦ㄦ寕杞?GPT Image Playground 鍓嶇瓑寰呮湰椤圭洰閰嶇疆鎸佷箙鍖栨仮澶嶅畬鎴愶紝鍐嶆妸褰撳墠鐢熷浘娓犻亾銆佹ā鍨嬨€丅ase URL銆丄PI Key銆佸紶鏁般€佸昂瀵稿拰璐ㄩ噺鍐欏叆 playground 閰嶇疆锛涘钩鍙伴粯璁ゆ帴鍙ｇ户缁娇鐢ㄥ悓婧?`/api/ai/system/[channelId]` 浠ｇ悊锛屽苟淇濈暀 playground 鍐呭凡鏈夌殑闈?OpenAI 鑷畾涔夋湇鍔″晢閰嶇疆銆傞渶瑕佷汉宸ラ獙璇佸埛鏂伴〉闈㈠悗浠嶄娇鐢ㄦ湰椤圭洰鈥滄笭閬?妯″瀷鈥濋厤缃彂璧风敓鎴愯姹傘€?
+- 鐢熷浘宸ヤ綔鍙帮細`/image` 椤甸潰宸插垏鎹负鍚屾簮鍏ㄥ睆鎸傝浇 `gpt_image_playground` 鍘熷鏋勫缓浜х墿锛屼繚鐣欏師椤圭洰鐨勯《閮ㄦ爮銆佹悳绱?绛涢€夈€佸巻鍙蹭换鍔°€佸簳閮ㄨ緭鍏ユ爮銆佸浘鐢熷浘鍙傝€冦€侀伄缃╃紪杈戙€丄gent 宸ヤ綔鍖恒€佽缃脊绐椼€佹敹钘忛泦銆佸浘鐗囧彸閿彍鍗曘€両ndexedDB 鏈湴瀛樺偍鍜屽師鐢?API 璋冪敤娴佺▼锛涢渶瑕佷汉宸ラ獙璇侀潤鎬佽祫婧愬姞杞姐€侀厤缃繚瀛樸€佺敓鎴?缂栬緫/涓嬭浇/澶嶅埗/鍘嗗彶澶嶇敤绛夋牳蹇冨姛鑳姐€?
+- 鐢熷浘宸ヤ綔鍙扮户缁繕鍘燂細`/image` 鎸傝浇鐨?GPT Image Playground 宸叉帴鍏ユ湰椤圭洰鍘熸湁娓犻亾閰嶇疆锛岃嚜鍔ㄥ悓姝ュ綋鍓嶇敓鍥炬ā鍨嬨€丅ase URL銆丄PI Key銆佸紶鏁般€佸昂瀵稿拰璐ㄩ噺锛涘钩鍙伴粯璁ょ郴缁熸笭閬撲細杞垚鍚屾簮 `/api/ai/system/[channelId]` 浠ｇ悊鍦板潃锛岄伩鍏嶇浉瀵瑰湴鍧€澶辨晥锛沇ebDAV 鐨?`image-workbench` 鍚屾鏀逛负璇诲彇骞舵仮澶?`gpt-image-playground` IndexedDB 閲岀殑浠诲姟鍜屽浘鐗囪褰曪紝鍚屾椂淇濈暀鏃?`image_generation_logs` 鍏滃簳銆傞渶瑕佷汉宸ラ獙璇佽嚜瀹氫箟娓犻亾銆佸钩鍙伴粯璁ゆ笭閬撱€佺敓鎴?缂栬緫/鍘嗗彶璁板綍銆佸埛鏂板悗閰嶇疆淇濇寔銆乄ebDAV 涓婁紶涓庢仮澶嶃€?
+- 鐢熷浘宸ヤ綔鍙扮Н鍒嗕笌绱犳潗鑱斿姩锛歚/image` 椤甸潰鎸傝浇 playground 鍚庯紝姣?5 绉掑強鍒囧洖椤甸潰鍙鏃跺埛鏂?`/api/auth/session`锛屾妸鏈€鏂扮Н鍒嗕綑棰濆啓鍥?`useUserStore`锛岃椤堕儴瀵艰埅绉垎寰芥爣鍦ㄧ郴缁熸笭閬撶敓鍥炬墸璐瑰悗鍑犵鍐呰嚜鍔ㄦ洿鏂帮紱鍚屾椂鐢?VOZEB 鐖剁獥鍙ｇ敤 `setInterval` 姣?1.5 绉掓壂鎻?playground iframe 鐨?DOM锛屽湪姣忎釜 TaskCard 鐨?鏀惰棌"鎸夐挳鏃佽竟鎻掑叆"鍔犲叆鎴戠殑绱犳潗"鎸夐挳锛堣摑鑹插姞鍙峰浘鏍囷級锛宨frame 鍥犻厤缃悓姝ラ噸鏂板姞杞藉悗涔熶細閲嶆柊瀹夎鎵弿鍣紱鐐瑰嚮浠诲姟鍗℃搷浣滃尯鎸夐挳鏃朵細鏀堕泦璇ヤ换鍔″唴鍏ㄩ儴杈撳嚭鍥惧苟鎵归噺鍔犲叆/绉婚櫎锛屽閫夋壒閲忔爮鍒欏鐞嗘墍鏈夐€変腑浠诲姟鐨勫叏閮ㄨ緭鍑哄浘锛涙墦寮€浠诲姟璇︽儏鍚庯紝褰撳墠棰勮鍥惧彸涓婅鐨勪笅杞芥寜閽梺浼氭柊澧炲崟寮?鍔犲叆绱犳潗"鎸夐挳锛屽彧鍔犲叆/绉婚櫎褰撳墠姝ｅ湪鐪嬬殑杩欎竴寮犺緭鍑哄浘锛涙寜閽偓娴彁绀烘敼涓哄拰 playground 鍏跺畠鎻愮ず涓€鑷寸殑娣辫壊鍦嗚姘旀场銆傞渶瑕佷汉宸ラ獙璇佺郴缁熸笭閬撶敓鍥惧悗绉垎浣欓鍒锋柊銆乸layground 鍗＄墖涓?鍔犲叆鎴戠殑绱犳潗"鎸夐挳鍙鍙偣鍑汇€佸鍥句换鍔″彲閫氳繃浠诲姟璇︽儏鍙姞鍏ュ叾涓竴寮犮€佷换鍔＄骇鎸夐挳浠嶅彲涓€娆″姞鍏ュ寮犮€佺偣鍑诲悗 `/assets` 椤甸潰鑳界湅鍒板垰鍔犲叆鐨勫浘鐗囥€?
+- 鐢熷浘宸ヤ綔鍙伴《閮ㄦ爮锛歚/image` 鎸傝浇 GPT Image Playground 鍚庝細绉婚櫎鍘熷伐浣滃彴宸︿笂瑙掔殑 GitHub 鏍囬/NEW 鍏ュ彛锛屽幓鎺夎烦杞?GitHub 鑳藉姏锛屽苟鎶娾€滅敾寤?/ Agent鈥濆垏鎹㈡寜閽Щ鍒板師鏍囬浣嶇疆锛涘悓鏃剁Щ闄ゅ彸涓婅鈥滃畨瑁呬负搴旂敤鈥濇寜閽紝淇濈暀鎿嶄綔鎸囧崡銆佽缃拰鍥剧墖涓嬭浇绛夊師鏈変笟鍔¤兘鍔涖€傞渶瑕佷汉宸ラ獙璇佸乏涓婅涓嶅啀鏄剧ず GPT Image Playground/NEW 涓斾笉鑳借烦 GitHub锛屸€滅敾寤?/ Agent鈥濅綅浜庡乏涓婅骞跺彲姝ｅ父鍒囨崲锛屽彸涓婅涓嶅啀鏄剧ず涓嬭浇/瀹夎鏈湴搴旂敤鍥炬爣銆?
+- 鐢ㄦ埛绔鑸細妗岄潰绔垱浣滃叆鍙ｄ粠椤堕儴鑳跺泭瀵艰埅璋冩暣涓哄乏渚т晶杈规爮锛岀Щ鍔ㄧ浠嶄娇鐢ㄦ娊灞夎彍鍗曪紝鐢诲竷缂栬緫椤电户缁殣钘忓簲鐢ㄥ鑸€?
+- 鍝佺墝浜屽紑锛氶粯璁ゅ睍绀哄悕鏇存柊涓?XSVO锛岄粯璁や粙缁嶆敼涓衡€淴SVO璁╁垱浣滄洿绠€鍗曗€濓紝Logo銆佷富棰樹富鑹层€丏ocker 闀滃儚鍚?鏁版嵁鍗枫€丷EADME 涓庢枃妗ｅ叆鍙ｅ悓姝ユ敼涓?XSVO銆?
+
+
+- Codex App 鎻掍欢鏂囨。锛氭柊澧炴彃浠跺畨瑁呮暀绋嬶紝鍖哄垎 AI 鑷姩瀹夎銆佹墜鍔ㄥ畨瑁呭拰鏈粨搴撳紑鍙戣皟璇曞畨瑁咃紱鍚屾浼樺寲鎻掍欢 README 涓庢妧鑳借鏄庛€?
+- 绠＄悊鍛樺悗鍙帮細浼樺寲鍚庡彴棣栭〉鎺掔増锛屾敼涓轰晶杈规爮鍒囨崲姒傝銆佺郴缁熻缃€佺敤鎴风鐞嗗拰鍏叡鎻愮ず璇嶅簱銆?
+- 鍝佺墝涓庣増鏈細椤圭洰灞曠ず鍚嶆洿鏂颁负 XSVO锛岀増鏈洿鏂颁负 v0.8.6锛屽彸涓婅 GitHub 鍜屾鏌ユ洿鏂板湴鍧€鍒囨崲鍒?xsvo/XSVO-main銆?
+- 閭娉ㄥ唽锛氬悗鍙板紑鍚偖绠辨敞鍐屽悗锛屽墠鍙版敞鍐岄〉鏄剧ず閭杈撳叆妗嗭紱SMTP 閰嶇疆鏀寔 QQ銆佺綉鏄撳拰鑷畾涔夐偖绠憋紝骞跺彲閫氳繃鈥滄祴璇曢偖绠扁€濋獙璇佸彂淇°€?
+- 绠＄悊鍛樻彁绀鸿瘝搴擄細鑷姩閲囬泦鍘熶綔鑰呮帴鍏ョ殑杩滅▼鎻愮ず璇嶆簮锛岀‘璁ゅ皝闈㈠浘涓虹湡瀹炶繙绋嬪浘鐗?URL锛屼笖涓嶅啀鍑虹幇 img.shields.io 寰界珷鍥俱€?
+- 鍏ㄥ眬閫氱煡锛氱鍒版垚鍔熺瓑 Ant Design 娑堟伅涓嬬Щ鍒伴《閮ㄥ鑸笅鏂癸紝骞剁粺涓€娴呰壊/娣辫壊鏍峰紡銆?
+- 閰嶇疆涓庣敤鎴峰亸濂斤細姣忎釜妯″瀷娓犻亾鏂板 OpenAI / Gemini 璋冪敤鏍煎紡閫夋嫨锛岄粯璁?OpenAI锛屽垏鎹㈤粯璁ゆ牸寮忔椂鍚屾鏇存柊榛樿 Base URL锛涙笭閬?Tab 澧炲姞绱у噾閱掔洰鐨勬彁閱掞紝璇存槑妯″瀷鏄惁鍙€夐渶瑕佸埌鈥滄ā鍨嬧€漈ab 閫夋嫨銆?
+- Gemini 璋冪敤鏍煎紡锛氭敮鎸佹媺鍙?Gemini 妯″瀷鍒楄〃锛屽苟鐢ㄤ簬鏂囨湰闂瓟銆佸湪绾?Agent 宸ュ叿璋冪敤銆佸熀纭€鐢熷浘鍜屽浘鐢熷浘璇锋眰銆?
+- 闊抽鍜岃棰戠敓鎴愶細閫夋嫨 Gemini 璋冪敤鏍煎紡鏃跺厛缁欏嚭涓嶆敮鎸佹彁绀猴紝浠嶉渶浣跨敤 OpenAI 鍏煎娓犻亾銆?
+- Reference v0.8.6 merge: keep XSVO-main branding, restored image workbench, side navigation, and xsvo-canvas naming; verify v0.8.6 version display, docs logo/favicon replacement, low-memory docs entry, Docker pnpm build flow, and admin generationConcurrency refresh on normal pages.
+
+- 棣栭〉瑙嗚涓?Logo 鍒锋柊锛歚/` 棣栭〉鏀逛负鏇寸幇浠ｇ殑 AI 鍒涗綔鍏ュ彛甯冨眬锛屽寘鍚幓鐠冩€侀《閮ㄥ鑸€佸乏渚у搧鐗屼富寮犮€佸彸渚у垱浣滄祦棰勮銆佽兘鍔涘崱鐗囥€佹彁绀鸿瘝浣滃搧澧欏姞杞藉崰浣嶅拰鏇存槑纭殑鐧诲綍寮圭獥鍝佺墝鍖猴紱`web/public/logo.svg` 涓?`web/public/icon.svg` 閲嶇粯涓?XSVO 涓撳睘闈掔豢娓愬彉鍒涗綔绗﹀彿銆傞渶瑕佷汉宸ラ獙璇侀椤垫祬鑹?娣辫壊涓婚銆佺Щ鍔ㄧ鍝嶅簲寮忋€佸鑸叆鍙ｃ€佺櫥褰曞脊绐椼€佹彁绀鸿瘝棰勮鍜屾柊鐗?Logo 灞曠ず鏄惁姝ｅ父銆?
+- 棣栭〉涓?Logo 鍒锋柊锛歚/` 棣栭〉 Hero 璋冩暣涓烘洿绠€绾︾殑 AI 鍒涗綔鍏ュ彛锛屽鍔犲搧鐗屾爣璇嗐€佸垱浣滆兘鍔涙爣绛惧拰鏇磋交鐨勫伐浣滃彴棰勮鍔ㄦ晥锛沗web/public/logo.svg` 涓?`web/public/icon.svg` 鏇存柊涓烘棤榛戝簳鐨勬瀬绠€鍒涗綔鏍囪瘑锛涢《閮ㄥ鑸€佺Щ鍔ㄧ鎶藉眽銆佺櫥褰曢〉銆佸悗鍙伴〉鍜屽悗鍙?Logo 棰勮涓嶅啀鐢?mask 鍗曡壊娓叉煋榛樿 Logo锛屽苟涓洪粯璁?Logo 鍔犲叆缂撳瓨鍒锋柊鍙傛暟銆傞渶瑕佷汉宸ラ獙璇侀椤垫祬鑹?娣辫壊涓婚銆佺Щ鍔ㄧ鍝嶅簲寮忋€佺櫥褰曞脊绐椼€侀《閮ㄥ鑸?渚ц竟鏍?Logo銆佸悗鍙伴〉闈?Logo 鍜屾祻瑙堝櫒 favicon 鏄剧ず鏄惁姝ｅ父銆?
+- 棣栭〉椤堕儴瀵艰埅绠€鍖栵細`/` 棣栭〉鍒犻櫎椤堕儴涓棿鐨勨€滄垜鐨勭敾甯?/ 鐢熷浘宸ヤ綔鍙?/ 瑙嗛鍒涗綔鍙?/ 鎻愮ず璇嶅簱鈥濊兌鍥婂鑸紝骞跺皢 Header 甯冨眬璋冩暣涓哄乏渚у搧鐗屻€佸彸渚т富棰?鐧诲綍鎿嶄綔銆傞渶瑕佷汉宸ラ獙璇侀椤甸《閮ㄤ笉鍐嶅嚭鐜拌缁勬寜閽紝娴呰壊/娣辫壊涓婚鍜岀Щ鍔ㄧ Header 瀵归綈姝ｅ父銆?
+- 棣栭〉 Header 铻嶅悎锛歚/` 棣栭〉椤堕儴鏀逛负閫忔槑鑳屾櫙锛屼笌 Hero 鍖哄煙娓愬彉/缃戞牸鑳屾櫙铻嶅悎锛涘垹闄ゅ乏涓婅 Logo 鍜屽搧鐗屾枃瀛楋紝骞剁Щ闄ら《閮ㄤ富棰樺垏鎹㈡寜閽紝鍙繚鐣欏彸涓婅鈥滆繘鍏ュ伐浣滃彴鈥濇寜閽€傞渶瑕佷汉宸ラ獙璇侀《閮ㄤ笌涓嬫柟鑳屾櫙杩囨浮鑷劧锛屼笖鍙充笂瑙掓寜閽彲姝ｅ父鎵撳紑鐧诲綍/杩涘叆宸ヤ綔鍙般€?
+- 棣栭〉棣栧睆涓庨粯璁や富棰橈細`/` 棣栭〉 Hero 鍖哄煙鏁翠綋涓婄Щ锛屽彸涓婅鎭㈠涓婚鍒囨崲鎸夐挳骞朵繚鐣欌€滆繘鍏ュ伐浣滃彴鈥濇寜閽紱鍏ㄧ珯涓婚 store 榛樿鍊兼敼涓洪粦澶滄ā寮忥紝棣栨鍔犺浇鑴氭湰鍦ㄦ棤鏈夋晥鍋忓ソ鏃剁洿鎺ュ簲鐢?dark锛屽苟閫氳繃鎸佷箙鍖栫増鏈縼绉诲皢鏃ч粯璁ゅ亸濂藉埛鏂板埌榛戝妯″紡銆傞渶瑕佷汉宸ラ獙璇侀椤甸灞忎笉鍐嶈繃浣庯紝涓婚鍒囨崲鍙甯稿垏鎹㈡槑/鏆楋紝鏂扮敤鎴锋垨娓呯┖ localStorage 鍚庨粯璁よ繘鍏ラ粦澶滈厤鑹层€?
+- 涓婚鍒囨崲涓庣櫥褰曟敞鍐?UI锛氫慨澶?`/` 棣栭〉 Hero 涓婄Щ鍚庤鐩?Header 瀵艰嚧鍙充笂瑙掍富棰樻寜閽偣鍑绘棤鏁堢殑灞傜骇闂锛涢噸鏂颁紭鍖?`/login` 鍜?`/register` 椤电殑鑳屾櫙銆佸崱鐗囧渾瑙?闃村奖銆佸搧鐗屼晶鏍忋€佽緭鍏ユ鍜屾彁浜ゆ寜閽瑙夈€傞渶瑕佷汉宸ラ獙璇侀椤靛彸涓婅涓婚鎸夐挳鍙垏鎹㈡祬/娣辫壊锛岀櫥褰?娉ㄥ唽椤靛湪妗岄潰鍜岀Щ鍔ㄧ瑙嗚瀵归綈銆佽〃鍗曞彲姝ｅ父鎻愪氦銆?
+- 登录注册 UI 重做：`/login`、`/register` 和首页未登录弹窗统一为同款 Studio Console 账号入口，桌面端卡片限制在首屏内避免页面滚动，左侧精简为 Creative Flow 控制台预览、Prompt 面板和图片/素材/视频/画布状态卡；右侧保留原登录/注册表单功能并统一输入框、按钮、焦点态、浅色/深色背景和移动端布局。需要人工验证登录、注册、邮箱验证码、忘记密码跳转和移动端响应式展示。
+- 首页登录弹窗 UI 重做：`/` 首页点击“进入工作台”弹出的登录弹窗改为与 `/login` 一致的 Studio Console 视觉，左侧展示 Creative Flow 控制台预览、Prompt 面板和状态卡，右侧使用同风格玻璃表单卡片。需要人工验证首页登录弹窗浅色/深色主题下视觉正常，登录/注册跳转和表单提交不受影响。
+
+
+
+- 首页参考原项目还原：`/` 首页顶部保留当前简化 Header，左侧新增 Logo + XSVO 品牌锁定区，右侧展示主题切换和“进入工作台”按钮，并把 Header 背景改为与 Hero 一致的点阵/细网格融合背景；顶部以下主体按 `D:/Project/github-project/vozeb-1.0.0` 原项目首页还原，包括大号品牌 Hero、版本徽标、流光披风 SVG、能力统计、功能卡片、提示词瀑布展示、页脚和登录弹窗，并继续使用当前 XSVO 品牌、站点配置、登录态和提示词接口。需要人工验证浅色/深色主题、桌面首屏、移动端首屏、右上角按钮点击、登录弹窗、提示词预览、提示词库跳转、页脚链接和未登录/已登录进入工作台流程。
+
+- Logo 无限符号适配：`web/public/logo.svg` 和 `web/public/icon.svg` 改为参考 `D:/Project/github-project/vozeb-1.0.0` 原项目的无限符号轮廓，并适配当前 XSVO 青绿/天蓝渐变品牌色；透明背景保留，便于首页、登录页、顶部导航、移动端抽屉、后台 Logo 预览和浏览器 favicon 在浅色/深色主题下展示。需要人工验证各入口 Logo 清晰可辨，首页底部和登录弹窗不再出现黑色或白色背景块，mask 单色渲染场景不变形。
+- 生图工作台 Agent 回复渲染修复：`/image` 静态包的 Agent 消息 Markdown 渲染器不再动态加载会引用旧入口 React 的 `react-markdown` / `streamdown` chunk，改为使用当前包内置纯文本兜底渲染，避免发送消息后因多 React 实例混用触发 `React error #321` / 工作台渲染异常；同时将 `/image` 宿主页、静态入口和 service worker 缓存版本统一刷新到 `xsvo-0.1.1-native-api-mode-6-agent-hookfix-4`。需要人工验证刷新 `/image` 后进入 Agent 模式发送一条文本消息，工作台不再弹出渲染异常，回复文本可正常显示；如浏览器仍命中旧 service worker，请强制刷新或清站点缓存后复测。

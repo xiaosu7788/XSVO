@@ -1,0 +1,15 @@
+{
+  "title": "项目介绍",
+  "root": true,
+  "defaultOpen": true,
+  "pages": [
+    "quick-start",
+    "codex-app-plugin",
+    "features",
+    "low-memory",
+    "render",
+    "docker",
+    "third-party-prompt-repositories",
+    "[项目仓库](https://github.com/xsvo/XSVO-main)"
+  ]
+}

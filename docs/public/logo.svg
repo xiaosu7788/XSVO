@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="XSVO logo">
+  <defs>
+    <linearGradient id="xsvo-a" x1="84" y1="70" x2="316" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="xsvo-b" x1="92" y1="308" x2="310" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="96" fill="#F8FAFC"/>
+  <path d="M112 116h102c52 0 94 42 94 94v74H186c-41 0-74-33-74-74V116Z" fill="url(#xsvo-a)"/>
+  <path d="M92 286c64-12 108-49 136-108 16-35 39-57 80-64" fill="none" stroke="url(#xsvo-b)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M251 96l10 26 27 10-27 10-10 27-10-27-26-10 26-10 10-26Z" fill="#FFFFFF"/>
+  <rect x="112" y="116" width="196" height="168" rx="34" fill="none" stroke="#0F172A" stroke-opacity="0.08" stroke-width="10"/>
+</svg>
