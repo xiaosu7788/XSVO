@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { App } from "antd";
 
 import { AssetPickerModal, type InsertAssetPayload } from "@/app/(user)/canvas/components/asset-picker-modal";
@@ -26,7 +26,7 @@ let recentPlaygroundRequestHints: Array<{ profile: PlaygroundProfile; prompt: st
 
 export default function ImagePage() {
     const localConfig = useEffectiveConfig();
-    const [iframeKey, setIframeKey] = useState(0);
+    const [playgroundReady, setPlaygroundReady] = useState(false);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [configHydrated, setConfigHydrated] = useState(false);
     const [systemSettings, setSystemSettings] = useState<PublicSystemSettings | null>(null);
@@ -76,17 +76,17 @@ export default function ImagePage() {
     };
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         const timer = setInterval(() => {
             if (installPointsRefreshBridge(iframeRef.current?.contentWindow)) clearInterval(timer);
         }, 200);
         return () => clearInterval(timer);
-    }, [settingsLoaded, configHydrated, iframeKey]);
+    }, [settingsLoaded, configHydrated, playgroundReady]);
 
     // 在 playground iframe 的每个 TaskCard 收藏按钮旁注入"加入我的素材"按钮
     // 用 MutationObserver + 定时双保险，避免 iframe 加载时机 / React 重渲染导致按钮丢失
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         const BUTTON_FLAG = "data-xsvo-asset-injected";
         const ICON_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>';
         const CHECK_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
@@ -252,11 +252,12 @@ export default function ImagePage() {
             if (!favButton) return;
             const actionSpan = favButton.parentElement;
             if (!actionSpan) return;
-            // 如果已经注入过，跳过
-            if (actionSpan.hasAttribute(BUTTON_FLAG)) return;
-            // 如果上一次注入的按钮还在但 span 标记丢了（React 重渲染），也跳过已存在的
             const next = actionSpan.nextElementSibling as HTMLElement | null;
-            if (next && next.dataset.xsvoAssetBtn === "1") return;
+            if (next && next.dataset.xsvoAssetBtn === "1") {
+                actionSpan.setAttribute(BUTTON_FLAG, "1");
+                return;
+            }
+            if (actionSpan.hasAttribute(BUTTON_FLAG)) actionSpan.removeAttribute(BUTTON_FLAG);
             actionSpan.setAttribute(BUTTON_FLAG, "1");
 
             // 注入前先查这组图是否已在素材库，决定初始状态
@@ -606,6 +607,7 @@ export default function ImagePage() {
         };
         // 状态同步：独立低频定时器，避免跟 MutationObserver 互相触发
         const syncTimer = setInterval(syncButtonStates, 1500);
+        const scanTimer = setInterval(scanAll, 1000);
 
         const attachObserver = () => {
             const doc = iframeRef.current?.contentDocument;
@@ -634,10 +636,11 @@ export default function ImagePage() {
 
         return () => {
             clearInterval(syncTimer);
+            clearInterval(scanTimer);
             clearInterval(attachTimer);
             observer?.disconnect();
         };
-    }, [settingsLoaded, configHydrated, iframeKey]);
+    }, [settingsLoaded, configHydrated, playgroundReady]);
 
     useEffect(() => {
         const store = useConfigStore as typeof useConfigStore & {
@@ -700,14 +703,13 @@ export default function ImagePage() {
         };
     }, [settingsLoaded, config.apiSource]);
 
-    useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+    useLayoutEffect(() => {
+        if (!configHydrated) return;
         syncPlaygroundSettings(settings, config);
-        setIframeKey((value) => value + 1);
-    }, [settingsLoaded, configHydrated, settings, config]);
+    }, [configHydrated, settings, config]);
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         const refreshCostInput = () => {
             const next = readPlaygroundCostInput(config);
             setPlaygroundCostInput((current) => (current?.model === next.model && current.count === next.count && current.platform === next.platform ? current : next));
@@ -715,10 +717,10 @@ export default function ImagePage() {
         refreshCostInput();
         const timer = setInterval(refreshCostInput, 1000);
         return () => clearInterval(timer);
-    }, [settingsLoaded, configHydrated, config]);
+    }, [configHydrated, playgroundReady, config]);
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         const applyComposerActions = () => {
             const doc = iframeRef.current?.contentDocument;
             installPlaygroundModelPicker(doc, settings.profiles, (profileId) => {
@@ -729,12 +731,12 @@ export default function ImagePage() {
         applyComposerActions();
         const timer = setInterval(applyComposerActions, 500);
         return () => clearInterval(timer);
-    }, [settingsLoaded, configHydrated, iframeKey, pointsCost, settings.profiles]);
+    }, [settingsLoaded, configHydrated, playgroundReady, pointsCost, settings.profiles]);
 
 
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         let observer: MutationObserver | null = null;
         let rafId: number | null = null;
         const applyHeaderChrome = () => {
@@ -766,10 +768,10 @@ export default function ImagePage() {
             observer?.disconnect();
             if (rafId !== null) cancelAnimationFrame(rafId);
         };
-    }, [settingsLoaded, configHydrated, iframeKey]);
+    }, [settingsLoaded, configHydrated, playgroundReady]);
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         let observer: MutationObserver | null = null;
         let rafId: number | null = null;
         const applyTaskBadges = () => {
@@ -797,11 +799,11 @@ export default function ImagePage() {
             observer?.disconnect();
             if (rafId !== null) cancelAnimationFrame(rafId);
         };
-    }, [settingsLoaded, configHydrated, iframeKey]);
+    }, [settingsLoaded, configHydrated, playgroundReady]);
 
 
     useEffect(() => {
-        if (!settingsLoaded || !configHydrated) return;
+        if (!configHydrated || !playgroundReady) return;
         let observer: MutationObserver | null = null;
         const applyPromptExpander = () => {
             const doc = iframeRef.current?.contentDocument;
@@ -823,18 +825,18 @@ export default function ImagePage() {
             clearInterval(timer);
             observer?.disconnect();
         };
-    }, [settingsLoaded, configHydrated, iframeKey]);
+    }, [settingsLoaded, configHydrated, playgroundReady]);
     return (
         <div className="relative h-full min-h-0 bg-gray-50 dark:bg-gray-950">
-            {settingsLoaded && configHydrated ? (
+            {configHydrated ? (
                 <iframe
                     ref={iframeRef}
-                    key={iframeKey}
                     src={PLAYGROUND_URL}
                     title="GPT Image Playground"
                     className="block h-full w-full border-0 bg-gray-50 dark:bg-gray-950"
                     allow="clipboard-read; clipboard-write; fullscreen; web-share"
                     allowFullScreen
+                    onLoad={() => setPlaygroundReady(true)}
                 />
             ) : null}
             <PromptSelectDialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen} onSelect={insertPromptToPlayground} />
