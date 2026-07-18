@@ -12,7 +12,7 @@ import { useAssetStore } from "@/stores/use-asset-store";
 import { uploadImage } from "@/services/image-storage";
 import { recordGenerationLog } from "@/services/api/generation-logs";
 
-const PLAYGROUND_URL = "/gpt-image-playground/index.html?v=xsvo-0.1.1-native-api-mode-6-agent-hookfix-10";
+const PLAYGROUND_URL = "/gpt-image-playground/index.html?v=xsvo-0.1.1-native-api-mode-6-agent-hookfix-13";
 const POINTS_REFRESH_INTERVAL_MS = 5000;
 const PLAYGROUND_STORE_KEY = "gpt-image-playground";
 const PLAYGROUND_ACTIVE_PROFILE_KEY = "xsvo-image-playground-active-profile";
