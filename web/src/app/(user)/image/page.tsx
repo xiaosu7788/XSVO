@@ -12,7 +12,7 @@ import { useAssetStore } from "@/stores/use-asset-store";
 import { uploadImage } from "@/services/image-storage";
 import { recordGenerationLog } from "@/services/api/generation-logs";
 
-const PLAYGROUND_URL = "/gpt-image-playground/index.html?v=xsvo-0.1.1-native-api-mode-6-agent-hookfix-8";
+const PLAYGROUND_URL = "/gpt-image-playground/index.html?v=xsvo-0.1.1-native-api-mode-6-agent-hookfix-10";
 const POINTS_REFRESH_INTERVAL_MS = 5000;
 const PLAYGROUND_STORE_KEY = "gpt-image-playground";
 const PLAYGROUND_ACTIVE_PROFILE_KEY = "xsvo-image-playground-active-profile";
@@ -23,6 +23,8 @@ const PLAYGROUND_REFERENCE_REQUEST_MAX_BYTES = 100 * 1024 * 1024;
 let activePlaygroundProfileIdMemory = "";
 let playgroundHostProfilesMemory: PlaygroundProfile[] = [];
 let recentPlaygroundRequestHints: Array<{ profile: PlaygroundProfile; prompt: string; createdAt: number }> = [];
+let playgroundStoreRawMemory: string | null | undefined;
+let playgroundStoreParsedMemory: Record<string, unknown> = {};
 
 export default function ImagePage() {
     const localConfig = useEffectiveConfig();
@@ -330,56 +332,20 @@ export default function ImagePage() {
             setBtnState(btn, Boolean(findExistingAsset(img)));
         };
 
-        // 观察器只在画廊模式工作，避免 Agent 流式更新时产生宿主侧 DOM 竞争。
-        let observer: MutationObserver | null = null;
-        let scanRafId: number | null = null;
-        const scanAllRaf = () => {
-            if (scanRafId !== null) return;
-            scanRafId = requestAnimationFrame(() => {
-                scanRafId = null;
-                const doc = iframeRef.current?.contentDocument;
-                if (!doc || !doc.body) return;
-                if (isPlaygroundInAgentMode()) {
-                    observer?.disconnect();
-                    observer = null;
-                    return;
-                }
-                const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
-                buttons.forEach(injectButton);
-                doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
-            });
-        };
-
-        const attachObserver = () => {
+        const scanAssets = () => {
             const doc = iframeRef.current?.contentDocument;
-            if (!doc || !doc.body) return;
-            if (isPlaygroundInAgentMode()) {
-                observer?.disconnect();
-                observer = null;
-                return;
-            }
-            if (observer) return;
-            const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
-            buttons.forEach(injectButton);
+            if (!doc?.body || isPlaygroundInAgentMode()) return;
+            doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]').forEach(injectButton);
             doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
-            observer = new MutationObserver(() => scanAllRaf());
-            observer.observe(doc.body, { childList: true, subtree: true });
         };
-
-        // 轮询只负责模式切换和 iframe 重挂载，不再轮询整个页面按钮状态。
-        const attachTimer = setInterval(() => {
-            const iframe = iframeRef.current;
-            const doc = iframe?.contentDocument;
-            if (doc && doc.body && doc.readyState === "complete") {
-                attachObserver();
-            }
+        const initialTimer = window.setTimeout(scanAssets, 1400);
+        const scanTimer = window.setInterval(() => {
+            if (document.visibilityState === "visible") scanAssets();
         }, 500);
-        attachObserver();
 
         return () => {
-            clearInterval(attachTimer);
-            observer?.disconnect();
-            if (scanRafId !== null) cancelAnimationFrame(scanRafId);
+            window.clearTimeout(initialTimer);
+            window.clearInterval(scanTimer);
         };
     }, [settingsLoaded, configHydrated, playgroundReady]);
 
@@ -479,65 +445,29 @@ export default function ImagePage() {
 
     useEffect(() => {
         if (!configHydrated || !playgroundReady) return;
-        let observer: MutationObserver | null = null;
-        let rafId: number | null = null;
         const applyHeaderChrome = () => {
-            if (isPlaygroundInAgentMode()) {
-                observer?.disconnect();
-                observer = null;
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                rafId = null;
-                return;
-            }
+            if (isPlaygroundInAgentMode()) return;
             const doc = iframeRef.current?.contentDocument;
             applyPlaygroundHeaderChrome(doc, {
                 onOpenPromptLibrary: () => setPromptDialogOpen(true),
                 onOpenAssets: () => setAssetPickerOpen(true),
             });
-            if (!observer && doc?.body) {
-                observer = new MutationObserver(() => {
-                    if (isPlaygroundInAgentMode()) {
-                        observer?.disconnect();
-                        observer = null;
-                        if (rafId !== null) cancelAnimationFrame(rafId);
-                        rafId = null;
-                        return;
-                    }
-                    // 用 rAF 延迟，避免在 React 渲染过程中同步修改 header DOM
-                    if (rafId !== null) return;
-                    rafId = requestAnimationFrame(() => {
-                        rafId = null;
-                        const d = iframeRef.current?.contentDocument;
-                        applyPlaygroundHeaderChrome(d, {
-                            onOpenPromptLibrary: () => setPromptDialogOpen(true),
-                            onOpenAssets: () => setAssetPickerOpen(true),
-                        });
-                    });
-                });
-                observer.observe(doc.body, { childList: true, subtree: true });
-            }
         };
-        applyHeaderChrome();
-        const timer = setInterval(applyHeaderChrome, 500);
+        const initialTimer = window.setTimeout(applyHeaderChrome, 600);
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === "visible") applyHeaderChrome();
+        }, 1200);
         return () => {
-            clearInterval(timer);
-            observer?.disconnect();
-            if (rafId !== null) cancelAnimationFrame(rafId);
+            window.clearTimeout(initialTimer);
+            window.clearInterval(timer);
         };
     }, [settingsLoaded, configHydrated, playgroundReady]);
 
     useEffect(() => {
         if (!configHydrated || !playgroundReady) return;
-        let observer: MutationObserver | null = null;
         let rafId: number | null = null;
         const applyTaskBadges = () => {
-            if (isPlaygroundInAgentMode()) {
-                observer?.disconnect();
-                observer = null;
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                rafId = null;
-                return;
-            }
+            if (isPlaygroundInAgentMode()) return;
             // 引用标签必须在 MutationObserver 微任务中同步清理，避免先绘制一帧原始 <ref ... />。
             sanitizePlaygroundTaskPromptRefs(iframeRef.current?.contentDocument);
             if (rafId !== null) return;
@@ -546,21 +476,13 @@ export default function ImagePage() {
                 correctPlaygroundTaskModelBadges(iframeRef.current?.contentDocument);
             });
         };
-        const attachObserver = () => {
-            const doc = iframeRef.current?.contentDocument;
-            if (!doc?.body || observer || isPlaygroundInAgentMode()) return;
-            observer = new MutationObserver(applyTaskBadges);
-            observer.observe(doc.body, { childList: true, subtree: true });
-        };
-        applyTaskBadges();
-        attachObserver();
-        const timer = setInterval(() => {
-            applyTaskBadges();
-            attachObserver();
-        }, 500);
+        const initialTimer = window.setTimeout(applyTaskBadges, 1200);
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === "visible") applyTaskBadges();
+        }, 1600);
         return () => {
-            clearInterval(timer);
-            observer?.disconnect();
+            window.clearTimeout(initialTimer);
+            window.clearInterval(timer);
             if (rafId !== null) cancelAnimationFrame(rafId);
         };
     }, [settingsLoaded, configHydrated, playgroundReady]);
@@ -568,34 +490,20 @@ export default function ImagePage() {
 
     useEffect(() => {
         if (!configHydrated || !playgroundReady) return;
-        let observer: MutationObserver | null = null;
         const applyPromptExpander = () => {
             const doc = iframeRef.current?.contentDocument;
             // Agent 模式下跳过输入框展开按钮注入：characterData/childList 回调会在 Agent 流式输出时
             // 频繁修改编辑器 DOM，与 React 渲染冲突触发 ErrorBoundary
-            if (isPlaygroundInAgentMode()) {
-                observer?.disconnect();
-                observer = null;
-                return;
-            }
+            if (isPlaygroundInAgentMode()) return;
             installPlaygroundPromptExpander(doc);
-            if (!observer && doc?.body) {
-                observer = new MutationObserver(() => {
-                    if (isPlaygroundInAgentMode()) {
-                        observer?.disconnect();
-                        observer = null;
-                        return;
-                    }
-                    installPlaygroundPromptExpander(doc);
-                });
-                observer.observe(doc.body, { childList: true, subtree: true });
-            }
         };
-        applyPromptExpander();
-        const timer = setInterval(applyPromptExpander, 300);
+        const initialTimer = window.setTimeout(applyPromptExpander, 900);
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === "visible") applyPromptExpander();
+        }, 1000);
         return () => {
-            clearInterval(timer);
-            observer?.disconnect();
+            window.clearTimeout(initialTimer);
+            window.clearInterval(timer);
         };
     }, [settingsLoaded, configHydrated, playgroundReady]);
     return (
@@ -2314,9 +2222,14 @@ function normalizeStreamPartialImages(value: unknown, fallback: number) {
 function readPlaygroundStore() {
     try {
         const raw = window.localStorage.getItem(PLAYGROUND_STORE_KEY);
+        if (raw === playgroundStoreRawMemory) return playgroundStoreParsedMemory;
         const parsed = raw ? JSON.parse(raw) : null;
-        return isRecord(parsed) ? parsed : {};
+        playgroundStoreRawMemory = raw;
+        playgroundStoreParsedMemory = isRecord(parsed) ? parsed : {};
+        return playgroundStoreParsedMemory;
     } catch {
+        playgroundStoreRawMemory = null;
+        playgroundStoreParsedMemory = {};
         return {};
     }
 }

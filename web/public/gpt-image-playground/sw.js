@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gpt-image-playground-v0.1.1-native-api-mode-6-agent-hookfix-8'
+const CACHE_NAME = 'gpt-image-playground-v0.1.1-native-api-mode-6-agent-hookfix-10'
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './pwa-icon.svg']
 
 self.addEventListener('install', (event) => {
