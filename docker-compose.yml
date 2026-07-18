@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/xsvo/xsvo-main:latest
+    image: ghcr.io/xiaosu7788/xsvo:latest
     container_name: xsvo-main
     ports:
       - "${XSVO_BIND_HOST:-0.0.0.0}:4000:4000"

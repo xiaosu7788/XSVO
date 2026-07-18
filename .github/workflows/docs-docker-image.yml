@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/xsvo/xsvo-main-docs
+  IMAGE_NAME: ghcr.io/xiaosu7788/xsvo-docs
 
 jobs:
   meta:

@@ -6,12 +6,16 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+concurrency:
+  group: xsvo-image-deploy
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/xsvo/xsvo-main
+  IMAGE_NAME: ghcr.io/xiaosu7788/xsvo
 
 jobs:
   meta:
@@ -115,3 +119,45 @@ jobs:
           done < <(find "$RUNNER_TEMP/digests" -type f -printf '%f\n' | sort)
 
           docker buildx imagetools create "${tag_args[@]}" "${digest_args[@]}"
+
+  deploy:
+    name: Deploy image to server
+    needs: merge
+    if: ${{ vars.XSVO_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Add server host key
+        shell: bash
+        env:
+          SERVER_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SERVER_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Pull image and restart Compose service
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          port="${SERVER_PORT:-22}"
+          ssh -p "$port" "$SERVER_USER@$SERVER_HOST" bash -s -- "$DEPLOY_PATH" <<'REMOTE'
+          set -euo pipefail
+          deploy_path="$1"
+          cd "$deploy_path"
+
+          git pull --ff-only origin main
+          docker compose -f docker-compose.yml pull
+          docker compose -f docker-compose.yml up -d --remove-orphans
+          docker compose -f docker-compose.yml ps
+          REMOTE

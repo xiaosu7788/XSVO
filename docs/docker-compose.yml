@@ -1,6 +1,6 @@
 services:
   docs:
-    image: ghcr.io/xsvo/xsvo-main-docs:latest
+    image: ghcr.io/xiaosu7788/xsvo-docs:latest
     ports:
       - "3001:3000"
     restart: unless-stopped

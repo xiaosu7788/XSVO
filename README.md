@@ -52,7 +52,7 @@ docker compose pull
 docker compose up -d
 ```
 
-默认 `docker-compose.yml` 使用 `ghcr.io/xsvo/xsvo-main:latest`，只会拉取预构建镜像并启动容器，不会执行 `next build`。账号、后台设置、签到记录和公共提示词会保存在 `xsvo-main-data` 数据卷里。
+默认 `docker-compose.yml` 使用 `ghcr.io/xiaosu7788/xsvo:latest`，只会拉取预构建镜像并启动容器，不会执行 `next build`。账号、后台设置、签到记录和公共提示词会保存在 `xsvo-main-data` 数据卷里。
 
 ### 2. 首次初始化
 
@@ -199,7 +199,7 @@ pnpm run dev
 ```yaml
 services:
   app:
-    image: ghcr.io/xsvo/xsvo-main:latest
+    image: ghcr.io/xiaosu7788/xsvo:latest
     container_name: xsvo-main
     ports:
       - "4000:4000"
@@ -222,7 +222,7 @@ docker compose up -d
 
 0.5G 服务器不要现场构建源码。Next.js 生产构建需要安装依赖、编译页面、收集页面数据并输出 standalone，内存太小时很容易被系统杀掉。当前 `docker-compose.yml` 默认使用发布镜像，不会在服务器执行 `next build`。需要自定义源码时，建议在本机或 GitHub Actions 构建并推送镜像，再让服务器执行 `docker compose pull && docker compose up -d`。
 
-如果服务器内存只有 0.5G，可以使用低内存 Compose 文件。它同样只拉取 `ghcr.io/xsvo/xsvo-main:latest` 发布镜像，并给运行中的容器加上 512MB 内存限制：
+如果服务器内存只有 0.5G，可以使用低内存 Compose 文件。它同样只拉取 `ghcr.io/xiaosu7788/xsvo:latest` 发布镜像，并给运行中的容器加上 512MB 内存限制：
 
 ```bash
 docker compose -f docker-compose.lowmem.yml pull
