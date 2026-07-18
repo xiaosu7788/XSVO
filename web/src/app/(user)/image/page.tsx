@@ -1107,7 +1107,8 @@ function syncPlaygroundModelPicker(wrapper: HTMLElement, profiles: PlaygroundPro
     const doc = wrapper.ownerDocument;
     const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
     const label = wrapper.querySelector<HTMLElement>('[data-xsvo-model-label="1"]');
-    if (label) label.textContent = activeProfile?.name || activeProfile?.model || "选择模型";
+    const labelText = activeProfile?.name || activeProfile?.model || "选择模型";
+    if (label && label.textContent !== labelText) label.textContent = labelText;
     const trigger = wrapper.querySelector<HTMLButtonElement>('[data-xsvo-model-trigger="1"]');
     const menu = wrapper.querySelector<HTMLElement>('[data-xsvo-model-menu="1"]');
     const arrow = wrapper.querySelector<HTMLElement>('[data-xsvo-model-arrow="1"]');
@@ -1336,15 +1337,6 @@ function patchLatestPlaygroundTaskProfile(profile: PlaygroundProfile, prompt: st
 function correctPlaygroundTaskModelBadges(doc: Document | null | undefined) {
     if (!doc) return;
     if (isPlaygroundInAgentMode()) return;
-    const view = doc.defaultView;
-    if (view && !(doc.body?.dataset.xsvoCorrectingTaskModelBadges === "1")) {
-        doc.body.dataset.xsvoCorrectingTaskModelBadges = "1";
-        view.requestAnimationFrame(() => {
-            correctPlaygroundTaskModelBadges(doc);
-            delete doc.body?.dataset.xsvoCorrectingTaskModelBadges;
-        });
-        return;
-    }
     const taskProfileMap = readPlaygroundTaskProfileMap();
     if (!playgroundHostProfilesMemory.length && !taskProfileMap.size) return;
     const taskProfiles = Array.from(taskProfileMap.values());
@@ -1364,22 +1356,25 @@ function correctPlaygroundTaskModelBadges(doc: Document | null | undefined) {
         const label = profile.name || profile.model;
         if (!label.trim()) return;
         setTaskModelChipText(firstChip, label);
-        firstChip.title = label;
-        card.dataset.xsvoTaskProfileId = profile.id;
-        row.dataset.xsvoTaskProfileId = profile.id;
-        firstChip.dataset.xsvoTaskModelCorrected = profile.id;
+        if (firstChip.title !== label) firstChip.title = label;
+        if (card.dataset.xsvoTaskProfileId !== profile.id) card.dataset.xsvoTaskProfileId = profile.id;
+        if (row.dataset.xsvoTaskProfileId !== profile.id) row.dataset.xsvoTaskProfileId = profile.id;
+        if (firstChip.dataset.xsvoTaskModelCorrected !== profile.id) firstChip.dataset.xsvoTaskModelCorrected = profile.id;
         chips.forEach((chip) => {
             if (chip === firstChip) return;
             const text = (chip.textContent || "").trim();
-            if (isLikelyPlaygroundTaskModelText(text, profileNames, modelNames) || isLikelyPlaygroundTaskProviderChip(chip, profileNames)) chip.style.display = "none";
+            if ((isLikelyPlaygroundTaskModelText(text, profileNames, modelNames) || isLikelyPlaygroundTaskProviderChip(chip, profileNames)) && chip.style.display !== "none") chip.style.display = "none";
         });
     });
 }
 
 function setTaskModelChipText(chip: HTMLElement, label: string) {
     const textNode = Array.from(chip.querySelectorAll<HTMLElement>("span")).at(-1);
-    if (textNode) textNode.textContent = label;
-    else chip.textContent = label;
+    if (textNode) {
+        if (textNode.textContent !== label) textNode.textContent = label;
+        return;
+    }
+    if (chip.textContent !== label) chip.textContent = label;
 }
 function sanitizePlaygroundTaskPromptRefs(doc: Document | null | undefined) {
     if (!doc || isPlaygroundInAgentMode()) return;
@@ -1543,11 +1538,15 @@ function installPlaygroundPromptExpander(doc: Document | null | undefined) {
 
     const expanded = isPromptExpanded(elements);
     const canExpand = shouldShowPromptExpand(editor, expanded);
-    button.style.display = canExpand ? "flex" : "none";
-    button.dataset.xsvoTooltip = expanded ? "恢复输入框" : "展开输入框";
-    button.setAttribute("aria-label", expanded ? "恢复输入框" : "展开输入框");
-    button.setAttribute("aria-pressed", String(expanded));
-    button.innerHTML = expanded ? collapseIconSvg() : expandIconSvg();
+    const display = canExpand ? "flex" : "none";
+    if (button.style.display !== display) button.style.display = display;
+    const tooltip = expanded ? "恢复输入框" : "展开输入框";
+    if (button.dataset.xsvoTooltip !== tooltip) button.dataset.xsvoTooltip = tooltip;
+    if (button.getAttribute("aria-label") !== tooltip) button.setAttribute("aria-label", tooltip);
+    const pressed = String(expanded);
+    if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
+    const icon = expanded ? collapseIconSvg() : expandIconSvg();
+    if (button.innerHTML !== icon) button.innerHTML = icon;
     if (!canExpand) hidePromptExpandTooltip(doc);
     button.onclick = (event) => {
         event.preventDefault();
