@@ -267,73 +267,7 @@ export default function ImagePage() {
                 }
                 const selectedImages = selectedCards.flatMap(findCardImages);
                 await toggleImageAssets(btn, selectedImages, selectedCards.length - selectedImages.length);
-                }
-                // 单卡片场景
-                const img = findCardImage(card);
-                if (!img) {
-                    messageRef.current?.warning("未找到图片");
-                    return;
-                }
-                const imageKey = img.dataset.imageId || img.src;
-                // 用 imageKey 在 store 里查是否已加入
-                const findExistingAsset = () => {
-                    const assets = useAssetStore.getState().assets;
-                    return assets.find((a) => a.source === "生图工作台" && (a.data?.dataUrl === img.src || (a as { _imageKey?: string })._imageKey === imageKey || a.title === `image-${imageKey}`));
-                };
-                const existing = findExistingAsset();
-                if (existing) {
-                    // 已加入 → 取消加入（删除素材）
-                    btn.dataset.xsvoLoading = "1";
-                    try {
-                        useAssetStore.getState().removeAsset(existing.id);
-                        setBtnState(btn, false);
-                        delete btn.dataset.xsvoAssetId;
-                        messageRef.current?.success("已从素材库移除");
-                    } catch (err) {
-                        console.error("[xsvo] 移除素材失败", err);
-                        messageRef.current?.error("移除失败：" + (err instanceof Error ? err.message : String(err)));
-                    } finally {
-                        delete btn.dataset.xsvoLoading;
-                    }
-                    return;
-                }
-                // 未加入 → 执行加入
-                btn.dataset.xsvoLoading = "1";
-                try {
-                    if (!img.complete || !img.naturalWidth) {
-                        await new Promise<void>((resolve) => {
-                            img.addEventListener("load", () => resolve(), { once: true });
-                            img.addEventListener("error", () => resolve(), { once: true });
-                        });
-                    }
-                    const canvas = document.createElement("canvas");
-                    canvas.width = img.naturalWidth || img.width || 1024;
-                    canvas.height = img.naturalHeight || img.height || 1024;
-                    const ctx = canvas.getContext("2d");
-                    if (!ctx) throw new Error("canvas 不可用");
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-                    if (!blob) throw new Error("转 Blob 失败");
-                    const uploaded = await uploadImage(blob);
-                    const asset = {
-                        kind: "image" as const,
-                        title: imageKey ? `image-${imageKey}` : `生图 ${new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`,
-                        coverUrl: uploaded.url,
-                        tags: ["生图工作台"],
-                        source: "生图工作台",
-                        data: { dataUrl: uploaded.url, storageKey: uploaded.storageKey, width: uploaded.width, height: uploaded.height, bytes: uploaded.bytes, mimeType: uploaded.mimeType },
-                    };
-                    const assetId = useAssetStore.getState().addAsset(asset);
-                    btn.dataset.xsvoAssetId = assetId;
-                    setBtnState(btn, true);
-                    messageRef.current?.success("已加入我的素材");
-                } catch (err) {
-                    console.error("[xsvo] 加入素材失败", err);
-                    messageRef.current?.error("加入素材失败：" + (err instanceof Error ? err.message : String(err)));
-                    setBtnState(btn, false);
-                } finally {
-                    delete btn.dataset.xsvoLoading;
-                }
+                return;
             });
 
             actionSpan.parentNode?.insertBefore(btn, actionSpan.nextSibling);
