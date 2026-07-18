@@ -83,15 +83,14 @@ export default function ImagePage() {
         return () => clearInterval(timer);
     }, [settingsLoaded, configHydrated, playgroundReady]);
 
-    // 在 playground iframe 的每个 TaskCard 收藏按钮旁注入"加入我的素材"按钮
-    // 用 MutationObserver + 定时双保险，避免 iframe 加载时机 / React 重渲染导致按钮丢失
+    // 只在画廊模式增强 iframe。Agent 流式渲染期间不观察或改写 React 管理的 DOM。
     useEffect(() => {
         if (!configHydrated || !playgroundReady) return;
         const BUTTON_FLAG = "data-xsvo-asset-injected";
         const ICON_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>';
         const CHECK_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
-        const ACTION_BTN_BLUE = "p-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/30 text-gray-400 hover:text-blue-500 transition";
-        const ACTION_BTN_GREEN = "p-1.5 rounded-md text-green-500 hover:bg-green-50 dark:hover:bg-green-950/30 bg-green-50 dark:bg-green-950/30 transition";
+        const ACTION_BTN_BLUE = "p-1.5 rounded-md transition text-gray-400 hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10";
+        const ACTION_BTN_GREEN = "p-1.5 rounded-md transition text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10";
         const OVERLAY_BTN_BLUE = "flex items-center justify-center px-1.5 py-0.5 bg-black/50 text-white rounded backdrop-blur-sm hover:bg-black/70 transition focus:outline-none focus:ring-1 focus:ring-white/50";
         const OVERLAY_BTN_GREEN = "flex items-center justify-center px-1.5 py-0.5 bg-green-500/90 text-white rounded backdrop-blur-sm hover:bg-green-600 transition focus:outline-none focus:ring-1 focus:ring-white/50";
 
@@ -161,46 +160,6 @@ export default function ImagePage() {
             setBtnState(btn, images.length > 0 && images.every((img) => findExistingAsset(img)));
         };
 
-        const hideAssetTooltip = (doc: Document | null | undefined) => {
-            doc?.querySelector('[data-xsvo-tooltip="1"]')?.remove();
-        };
-
-        const showAssetTooltip = (btn: HTMLButtonElement) => {
-            const doc = btn.ownerDocument;
-            hideAssetTooltip(doc);
-            const rect = btn.getBoundingClientRect();
-            const tooltip = doc.createElement("div");
-            tooltip.dataset.xsvoTooltip = "1";
-            tooltip.className = "fixed pointer-events-none rounded-lg bg-gray-800 px-3 py-2 text-xs font-normal text-white shadow-lg whitespace-nowrap";
-            tooltip.style.zIndex = "120";
-            tooltip.style.visibility = "hidden";
-            tooltip.textContent = btn.dataset.xsvoTooltip || "加入素材";
-            const arrow = doc.createElement("div");
-            arrow.className = "absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-800";
-            tooltip.appendChild(arrow);
-            doc.body.appendChild(tooltip);
-            const tooltipRect = tooltip.getBoundingClientRect();
-            const view = doc.defaultView;
-            if (!view) return;
-            const margin = 8;
-            const gap = 8;
-            const left = Math.min(Math.max(rect.left + rect.width / 2 - tooltipRect.width / 2, margin), Math.max(margin, view.innerWidth - tooltipRect.width - margin));
-            const aboveTop = rect.top - tooltipRect.height - gap;
-            const placeTop = aboveTop >= margin;
-            tooltip.style.left = `${left}px`;
-            tooltip.style.top = `${placeTop ? aboveTop : rect.bottom + gap}px`;
-            if (!placeTop) arrow.className = "absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-800";
-            tooltip.style.visibility = "visible";
-        };
-
-        const bindAssetTooltip = (btn: HTMLButtonElement) => {
-            btn.addEventListener("mouseenter", () => showAssetTooltip(btn));
-            btn.addEventListener("mouseleave", () => hideAssetTooltip(btn.ownerDocument));
-            btn.addEventListener("focus", () => showAssetTooltip(btn));
-            btn.addEventListener("blur", () => hideAssetTooltip(btn.ownerDocument));
-            btn.addEventListener("click", () => hideAssetTooltip(btn.ownerDocument));
-        };
-
         const toggleImageAssets = async (btn: HTMLButtonElement, images: HTMLImageElement[], notFoundCount = 0) => {
             if (!images.length) {
                 messageRef.current?.warning("未找到图片");
@@ -211,6 +170,8 @@ export default function ImagePage() {
             const items = images.map((img) => ({ img, existing: findExistingAsset(img) }));
             const addedItems = items.filter((item) => item.existing);
             const pendingItems = items.filter((item) => !item.existing);
+            let successCount = 0;
+            let failCount = 0;
 
             try {
                 if (pendingItems.length === 0 && addedItems.length > 0) {
@@ -222,8 +183,9 @@ export default function ImagePage() {
                     return;
                 }
 
-                let successCount = 0;
-                let failCount = 0;
+                // 先更新原生按钮状态，图片上传在后台完成，避免点击后出现明显等待。
+                setBtnState(btn, true);
+
                 for (const item of pendingItems) {
                     try {
                         await addImageAsset(item.img);
@@ -244,6 +206,7 @@ export default function ImagePage() {
                     messageRef.current?.info("没有可加入的图片");
                 }
             } finally {
+                if (failCount > 0) syncOneButtonState(btn, images);
                 delete btn.dataset.xsvoLoading;
             }
         };
@@ -268,12 +231,11 @@ export default function ImagePage() {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.setAttribute("aria-label", "加入我的素材");
+            btn.title = "加入素材";
             btn.dataset.xsvoAssetBtn = "1";
-            bindAssetTooltip(btn);
-            // 初始 className/innerHTML，后续由 setBtnState 统一管理（通过 data-xsvo-state 标记避免重复写入）
+            // 使用和收藏按钮一致的原生操作按钮样式。
             btn.className = ACTION_BTN_BLUE;
             btn.innerHTML = ICON_SVG;
-            btn.dataset.xsvoTooltip = "加入素材";
             btn.dataset.xsvoState = "blue";
             if (alreadyAdded) {
                 // 同步为绿色状态
@@ -281,7 +243,7 @@ export default function ImagePage() {
                 btn.className = ACTION_BTN_GREEN;
                 btn.innerHTML = CHECK_SVG;
                 btn.setAttribute("aria-label", "点击移除素材");
-                btn.dataset.xsvoTooltip = "点击移除";
+                btn.title = "点击移除素材";
             }
             btn.addEventListener("click", async (e) => {
                 e.preventDefault();
@@ -305,104 +267,6 @@ export default function ImagePage() {
                 }
                 const selectedImages = selectedCards.flatMap(findCardImages);
                 await toggleImageAssets(btn, selectedImages, selectedCards.length - selectedImages.length);
-                return;
-                // 批量操作栏场景：没有 data-task-id 祖先，遍历所有选中卡片
-                if (!card) {
-                    const doc = iframeRef.current?.contentDocument;
-                    if (!doc) return;
-                    // 选中卡片右上角有蓝色圆形勾选标记
-                    const allCards = doc.querySelectorAll("[data-task-id]");
-                    const selectedCards: Element[] = [];
-                    allCards.forEach((c) => {
-                        const checkMark = c.querySelector(".bg-blue-500.rounded-full");
-                        if (checkMark) selectedCards.push(c);
-                    });
-                    if (selectedCards.length === 0) {
-                        messageRef.current?.warning("未选中任何任务");
-                        return;
-                    }
-                    btn.dataset.xsvoLoading = "1";
-                    // 先收集所有选中卡片对应的图片和已加入状态
-                    const items: Array<{ img: HTMLImageElement; imageKey: string; existing?: ReturnType<typeof useAssetStore.getState>["assets"][number] }> = [];
-                    for (const c of selectedCards) {
-                        const img = findCardImage(c);
-                        if (!img) continue;
-                        const imageKey = img.dataset.imageId || img.src;
-                        const existing = useAssetStore.getState().assets.find((a) =>
-                            a.source === "生图工作台" && (
-                                a.data?.dataUrl === img.src ||
-                                (imageKey && a.title === `image-${imageKey}`)
-                            )
-                        );
-                        items.push({ img, imageKey, existing });
-                    }
-                    const addedItems = items.filter((it) => it.existing);
-                    const pendingItems = items.filter((it) => !it.existing);
-                    const notFoundCount = selectedCards.length - items.length;
-                    // 全部已加入 → 批量取消
-                    if (pendingItems.length === 0 && addedItems.length > 0) {
-                        try {
-                            for (const it of addedItems) {
-                                if (it.existing) useAssetStore.getState().removeAsset(it.existing.id);
-                            }
-                            setBtnState(btn, false);
-                            messageRef.current?.success(`已从素材库移除 ${addedItems.length} 张${notFoundCount > 0 ? `（${notFoundCount} 张未找到图片）` : ""}`);
-                        } catch (err) {
-                            console.error("[xsvo] 批量移除素材失败", err);
-                            messageRef.current?.error("批量移除失败：" + (err instanceof Error ? err.message : String(err)));
-                        }
-                        delete btn.dataset.xsvoLoading;
-                        return;
-                    }
-                    // 否则批量加入未加入的
-                    let successCount = 0;
-                    let failCount = 0;
-                    for (const it of pendingItems) {
-                        const { img, imageKey } = it;
-                        try {
-                            if (!img.complete || !img.naturalWidth) {
-                                await new Promise<void>((resolve) => {
-                                    img.addEventListener("load", () => resolve(), { once: true });
-                                    img.addEventListener("error", () => resolve(), { once: true });
-                                });
-                            }
-                            const canvas = document.createElement("canvas");
-                            canvas.width = img.naturalWidth || img.width || 1024;
-                            canvas.height = img.naturalHeight || img.height || 1024;
-                            const ctx = canvas.getContext("2d");
-                            if (!ctx) throw new Error("canvas 不可用");
-                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-                            if (!blob) throw new Error("转 Blob 失败");
-                            const uploaded = await uploadImage(blob);
-                            useAssetStore.getState().addAsset({
-                                kind: "image",
-                                title: imageKey ? `image-${imageKey}` : `生图 ${new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}`,
-                                coverUrl: uploaded.url,
-                                tags: ["生图工作台"],
-                                source: "生图工作台",
-                                data: { dataUrl: uploaded.url, storageKey: uploaded.storageKey, width: uploaded.width, height: uploaded.height, bytes: uploaded.bytes, mimeType: uploaded.mimeType },
-                            });
-                            successCount++;
-                        } catch (err) {
-                            console.error("[xsvo] 批量加入素材失败", err);
-                            failCount++;
-                        }
-                    }
-                    // 加入成功后同步按钮样式：如果所有图都已加入（pending 都成功）→ 绿色 ✓
-                    if (failCount === 0 && successCount === pendingItems.length) {
-                        setBtnState(btn, true);
-                    }
-                    delete btn.dataset.xsvoLoading;
-                    const skippedCount = addedItems.length;
-                    if (successCount > 0) {
-                        messageRef.current?.success(`已加入 ${successCount} 张${skippedCount > 0 ? `（${skippedCount} 张已存在已跳过）` : ""}${failCount > 0 ? `，${failCount} 张失败` : ""}${notFoundCount > 0 ? `，${notFoundCount} 张未找到图片` : ""}`);
-                    } else if (failCount > 0) {
-                        messageRef.current?.error(`加入失败：${failCount} 张图片未能加入`);
-                    } else {
-                        messageRef.current?.info("没有可加入的图片");
-                    }
-                    return;
                 }
                 // 单卡片场景
                 const img = findCardImage(card);
@@ -481,13 +345,13 @@ export default function ImagePage() {
                 btn.className = btn.dataset.xsvoButtonStyle === "overlay" ? OVERLAY_BTN_GREEN : ACTION_BTN_GREEN;
                 btn.innerHTML = CHECK_SVG;
                 btn.setAttribute("aria-label", "点击移除素材");
-                btn.dataset.xsvoTooltip = "点击移除";
+                btn.title = "点击移除素材";
                 btn.dataset.xsvoState = "green";
             } else if (!green && isGreen) {
                 btn.className = btn.dataset.xsvoButtonStyle === "overlay" ? OVERLAY_BTN_BLUE : ACTION_BTN_BLUE;
                 btn.innerHTML = ICON_SVG;
                 btn.setAttribute("aria-label", "加入我的素材");
-                btn.dataset.xsvoTooltip = "加入素材";
+                btn.title = "加入素材";
                 btn.dataset.xsvoState = "blue";
             }
         };
@@ -512,12 +376,11 @@ export default function ImagePage() {
             btn.type = "button";
             btn.dataset.xsvoAssetSingleBtn = "1";
             btn.dataset.xsvoButtonStyle = "overlay";
-            btn.dataset.xsvoTooltip = "加入素材";
+            btn.title = "加入素材";
             btn.dataset.xsvoState = "blue";
             btn.className = OVERLAY_BTN_BLUE;
             btn.innerHTML = ICON_SVG;
             btn.setAttribute("aria-label", "加入当前图片到素材");
-            bindAssetTooltip(btn);
             btn.addEventListener("click", async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -533,112 +396,56 @@ export default function ImagePage() {
             setBtnState(btn, Boolean(findExistingAsset(img)));
         };
 
-        const syncButtonStates = () => {
-            const doc = iframeRef.current?.contentDocument;
-            if (!doc) return;
-            // Agent 模式下跳过素材按钮状态同步，避免修改残留 DOM 干扰 React 渲染
-            if (isPlaygroundInAgentMode()) return;
-            const buttons = doc.querySelectorAll<HTMLButtonElement>('button[data-xsvo-asset-btn="1"]');
-            buttons.forEach((btn) => {
-                if (btn.dataset.xsvoLoading === "1") return;
-                // 找到按钮所属卡片的图片
-                const actionSpan = btn.parentElement;
-                const favButton = actionSpan?.querySelector('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
-                const card = favButton?.closest("[data-task-id]");
-                // 批量按钮场景：没有 data-task-id 祖先，按选中卡片状态决定
-                if (!card) {
-                    const allCards = doc.querySelectorAll("[data-task-id]");
-                    let selectedTotal = 0;
-                    let selectedImageTotal = 0;
-                    let selectedAdded = 0;
-                    let hasImage = false;
-                    allCards.forEach((c) => {
-                        const checkMark = c.querySelector(".bg-blue-500.rounded-full");
-                        if (!checkMark) return;
-                        selectedTotal++;
-                        const images = findCardImages(c);
-                        if (!images.length) return;
-                        hasImage = true;
-                        selectedImageTotal += images.length;
-                        selectedAdded += images.filter((img) => findExistingAsset(img)).length;
-                    });
-                    if (selectedTotal === 0 || !hasImage) return;
-                    setBtnState(btn, selectedImageTotal > 0 && selectedAdded === selectedImageTotal);
-                    return;
-                }
-                // 单卡片按钮场景
-                const images = findCardImages(card);
-                if (!images.length) return;
-                syncOneButtonState(btn, images);
-            });
-
-            const singleButtons = doc.querySelectorAll<HTMLButtonElement>('button[data-xsvo-asset-single-btn="1"]');
-            singleButtons.forEach((btn) => {
-                if (btn.dataset.xsvoLoading === "1") return;
-                const img = findSinglePreviewImage(btn);
-                if (!img) return;
-                setBtnState(btn, Boolean(findExistingAsset(img)));
-            });
-        };
-
-        const scanAll = () => {
-            const doc = iframeRef.current?.contentDocument;
-            if (!doc || !doc.body) return;
-            // Agent 模式下跳过素材按钮注入：injectButton 会向 React 管理的 span 注入新按钮，
-            // 与 Agent 模式任务卡片流式渲染冲突触发 ErrorBoundary
-            if (isPlaygroundInAgentMode()) return;
-            const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
-            buttons.forEach(injectButton);
-            doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
-        };
-
-        // MutationObserver 只负责注入新按钮，不做状态同步（避免反馈循环）
-        // 状态同步由 setInterval 单独负责
+        // 观察器只在画廊模式工作，避免 Agent 流式更新时产生宿主侧 DOM 竞争。
         let observer: MutationObserver | null = null;
+        let scanRafId: number | null = null;
         const scanAllRaf = () => {
-            requestAnimationFrame(() => {
+            if (scanRafId !== null) return;
+            scanRafId = requestAnimationFrame(() => {
+                scanRafId = null;
                 const doc = iframeRef.current?.contentDocument;
                 if (!doc || !doc.body) return;
-                if (isPlaygroundInAgentMode()) return;
+                if (isPlaygroundInAgentMode()) {
+                    observer?.disconnect();
+                    observer = null;
+                    return;
+                }
                 const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
                 buttons.forEach(injectButton);
                 doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
             });
         };
-        // 状态同步：独立低频定时器，避免跟 MutationObserver 互相触发
-        const syncTimer = setInterval(syncButtonStates, 1500);
-        const scanTimer = setInterval(scanAll, 1000);
 
         const attachObserver = () => {
             const doc = iframeRef.current?.contentDocument;
             if (!doc || !doc.body) return;
-            // Agent 模式下跳过素材按钮注入，但仍创建 observer，以便切回画廊模式时自动恢复
-            if (!isPlaygroundInAgentMode()) {
-                if (observer) observer.disconnect();
-                const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
-                buttons.forEach(injectButton);
-                doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
+            if (isPlaygroundInAgentMode()) {
+                observer?.disconnect();
+                observer = null;
+                return;
             }
             if (observer) return;
+            const buttons = doc.querySelectorAll('button[aria-label="收藏任务"], button[aria-label="编辑收藏夹"]');
+            buttons.forEach(injectButton);
+            doc.querySelectorAll('button[aria-label="下载图片"]').forEach(injectSingleImageButton);
             observer = new MutationObserver(() => scanAllRaf());
             observer.observe(doc.body, { childList: true, subtree: true });
         };
 
-        // iframe 可能还没 mount / 还没加载，轮询等它就绪
+        // 轮询只负责模式切换和 iframe 重挂载，不再轮询整个页面按钮状态。
         const attachTimer = setInterval(() => {
             const iframe = iframeRef.current;
             const doc = iframe?.contentDocument;
             if (doc && doc.body && doc.readyState === "complete") {
                 attachObserver();
-                clearInterval(attachTimer);
             }
-        }, 100);
+        }, 500);
+        attachObserver();
 
         return () => {
-            clearInterval(syncTimer);
-            clearInterval(scanTimer);
             clearInterval(attachTimer);
             observer?.disconnect();
+            if (scanRafId !== null) cancelAnimationFrame(scanRafId);
         };
     }, [settingsLoaded, configHydrated, playgroundReady]);
 
@@ -722,6 +529,7 @@ export default function ImagePage() {
     useEffect(() => {
         if (!configHydrated || !playgroundReady) return;
         const applyComposerActions = () => {
+            if (isPlaygroundInAgentMode()) return;
             const doc = iframeRef.current?.contentDocument;
             installPlaygroundModelPicker(doc, settings.profiles, (profileId) => {
                 switchPlaygroundProfile(profileId);
@@ -740,6 +548,13 @@ export default function ImagePage() {
         let observer: MutationObserver | null = null;
         let rafId: number | null = null;
         const applyHeaderChrome = () => {
+            if (isPlaygroundInAgentMode()) {
+                observer?.disconnect();
+                observer = null;
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                rafId = null;
+                return;
+            }
             const doc = iframeRef.current?.contentDocument;
             applyPlaygroundHeaderChrome(doc, {
                 onOpenPromptLibrary: () => setPromptDialogOpen(true),
@@ -747,6 +562,13 @@ export default function ImagePage() {
             });
             if (!observer && doc?.body) {
                 observer = new MutationObserver(() => {
+                    if (isPlaygroundInAgentMode()) {
+                        observer?.disconnect();
+                        observer = null;
+                        if (rafId !== null) cancelAnimationFrame(rafId);
+                        rafId = null;
+                        return;
+                    }
                     // 用 rAF 延迟，避免在 React 渲染过程中同步修改 header DOM
                     if (rafId !== null) return;
                     rafId = requestAnimationFrame(() => {
@@ -775,16 +597,24 @@ export default function ImagePage() {
         let observer: MutationObserver | null = null;
         let rafId: number | null = null;
         const applyTaskBadges = () => {
+            if (isPlaygroundInAgentMode()) {
+                observer?.disconnect();
+                observer = null;
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                rafId = null;
+                return;
+            }
+            // 引用标签必须在 MutationObserver 微任务中同步清理，避免先绘制一帧原始 <ref ... />。
+            sanitizePlaygroundTaskPromptRefs(iframeRef.current?.contentDocument);
             if (rafId !== null) return;
             rafId = requestAnimationFrame(() => {
                 rafId = null;
                 correctPlaygroundTaskModelBadges(iframeRef.current?.contentDocument);
-                sanitizePlaygroundTaskPromptRefs(iframeRef.current?.contentDocument);
             });
         };
         const attachObserver = () => {
             const doc = iframeRef.current?.contentDocument;
-            if (!doc?.body || observer) return;
+            if (!doc?.body || observer || isPlaygroundInAgentMode()) return;
             observer = new MutationObserver(applyTaskBadges);
             observer.observe(doc.body, { childList: true, subtree: true });
         };
@@ -809,11 +639,19 @@ export default function ImagePage() {
             const doc = iframeRef.current?.contentDocument;
             // Agent 模式下跳过输入框展开按钮注入：characterData/childList 回调会在 Agent 流式输出时
             // 频繁修改编辑器 DOM，与 React 渲染冲突触发 ErrorBoundary
-            if (isPlaygroundInAgentMode()) return;
+            if (isPlaygroundInAgentMode()) {
+                observer?.disconnect();
+                observer = null;
+                return;
+            }
             installPlaygroundPromptExpander(doc);
             if (!observer && doc?.body) {
                 observer = new MutationObserver(() => {
-                    if (isPlaygroundInAgentMode()) return;
+                    if (isPlaygroundInAgentMode()) {
+                        observer?.disconnect();
+                        observer = null;
+                        return;
+                    }
                     installPlaygroundPromptExpander(doc);
                 });
                 observer.observe(doc.body, { childList: true, subtree: true });
@@ -2086,6 +1924,7 @@ function loadBlobImage(blob: Blob) {
 }
 
 function applyPlaygroundHeaderChrome(doc: Document | null | undefined, actions: PlaygroundHeaderActions) {
+    if (isPlaygroundInAgentMode()) return;
     removePlaygroundInstallButton(doc);
     movePlaygroundModeTabsToTitleSlot(doc);
     installPlaygroundLibraryButtons(doc, actions);
