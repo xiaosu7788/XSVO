@@ -120,6 +120,15 @@ const IMAGE_MAX_PIXELS = 8294400;
 const IMAGE_MAX_EDGE = 3840;
 const IMAGE_MAX_RATIO = 3;
 const IMAGE_OUTPUT_FORMAT = "png";
+
+function imageOutputParams(config: AiConfig) {
+    return {
+        output_format: config.outputFormat || IMAGE_OUTPUT_FORMAT,
+        ...(config.transparentBackground ? { background: "transparent" } : {}),
+        ...(config.moderation && config.moderation !== "auto" ? { moderation: config.moderation } : {}),
+        ...(config.outputCompression && config.outputCompression !== "100" ? { output_compression: Number(config.outputCompression) } : {}),
+    };
+}
 const IMAGE_TASK_POLL_INTERVAL_MS = 1800;
 const IMAGE_TASK_TIMEOUT_MS = 30 * 60 * 1000;
 const IMAGE_TASK_CREATE_RETRY_INTERVAL_MS = 2500;
@@ -648,8 +657,8 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 n,
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
-                response_format: "url",
-                output_format: IMAGE_OUTPUT_FORMAT,
+                response_format: requestConfig.responseFormatB64Json ? "b64_json" : "url",
+                ...imageOutputParams(requestConfig),
             },
             {
                 headers: aiHeaders(requestConfig, "application/json"),
@@ -780,8 +789,12 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     formData.set("model", requestConfig.model);
     formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
     formData.set("n", String(n));
-    formData.set("response_format", "url");
-    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
+    formData.set("response_format", requestConfig.responseFormatB64Json ? "b64_json" : "url");
+    const outputParams = imageOutputParams(requestConfig);
+    formData.set("output_format", outputParams.output_format);
+    if (outputParams.background) formData.set("background", outputParams.background);
+    if (outputParams.moderation) formData.set("moderation", outputParams.moderation);
+    if (outputParams.output_compression) formData.set("output_compression", String(outputParams.output_compression));
     if (quality) {
         formData.set("quality", quality);
     }

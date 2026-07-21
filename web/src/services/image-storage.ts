@@ -85,6 +85,28 @@ export async function imageToDataUrl(image: { url?: string; dataUrl?: string; re
     return fallback;
 }
 
+export async function normalizeImageDataUrl(image: { url?: string; dataUrl?: string; remoteUrl?: string; serverUrl?: string; storageKey?: string }) {
+    const inline = (image.dataUrl || "").trim();
+    if (inline.startsWith("data:")) return inline;
+    if (image.storageKey) {
+        const stored = await resolveStoredImageDataUrl(image.storageKey, "");
+        if (stored) return stored;
+    }
+    return imageToDataUrl(image);
+}
+
+export async function ensureStoredImage(input: { url?: string; dataUrl?: string; remoteUrl?: string; serverUrl?: string; storageKey?: string; width?: number; height?: number; bytes?: number; mimeType?: string }) {
+    if (input.storageKey) {
+        const storedDataUrl = (input.dataUrl || "").startsWith("data:") ? input.dataUrl : await resolveStoredImageDataUrl(input.storageKey, "");
+        const url = await resolveImageUrl(input.storageKey, storedDataUrl || input.dataUrl || input.url || input.remoteUrl || input.serverUrl || "");
+        return { ...input, dataUrl: storedDataUrl || input.dataUrl, url, storageKey: input.storageKey };
+    }
+    const dataUrl = await normalizeImageDataUrl(input);
+    if (!dataUrl || dataUrl.startsWith("blob:")) return { ...input, dataUrl, url: browserReadableMediaUrl(dataUrl || input.url || input.remoteUrl || input.serverUrl || "") };
+    const stored = await uploadImage(dataUrl);
+    return { ...input, dataUrl, url: stored.url, storageKey: stored.storageKey, width: stored.width, height: stored.height, bytes: stored.bytes, mimeType: stored.mimeType };
+}
+
 function uniqueImageSources(values: Array<string | undefined>) {
     return Array.from(new Set(values.map((value) => (value || "").trim()).filter(Boolean)));
 }

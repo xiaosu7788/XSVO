@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { App } from "antd";
 
 import { SiteAnnouncementPopup } from "@/components/layout/site-announcement-popup";
+import { AppConfigModal } from "@/components/layout/app-config-modal";
 import { appStorageKey } from "@/lib/storage-keys";
 import { applyPublicSystemSettings, useConfigStore, type PublicSystemSettings } from "@/stores/use-config-store";
 import { type LocalUser, useUserStore } from "@/stores/use-user-store";
@@ -42,9 +43,23 @@ export function ClientRootInit({ children }: { children: ReactNode }) {
         return () => window.removeEventListener("xsvo-system-config-missing", handleMissingConfig);
     }, [message]);
 
+    useEffect(() => {
+        if (!window.location.pathname.startsWith("/image") || !("serviceWorker" in navigator)) return;
+        void navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations
+                .filter((registration) => registration.scope.includes("/gpt-image-playground/"))
+                .forEach((registration) => void registration.unregister());
+        });
+        if (!("caches" in window)) return;
+        void caches.keys().then((keys) => {
+            keys.filter((key) => key.startsWith("gpt-image-playground-")).forEach((key) => void caches.delete(key));
+        });
+    }, []);
+
     return (
         <>
             {children}
+            <AppConfigModal />
             <SiteAnnouncementPopup />
         </>
     );

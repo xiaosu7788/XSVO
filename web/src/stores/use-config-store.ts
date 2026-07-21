@@ -8,6 +8,8 @@ import { nanoid } from "nanoid";
 import { appStorageKey, legacyAppStorageKey, migrateLocalStorageKey } from "@/lib/storage-keys";
 
 export type ApiCallFormat = "openai" | "gemini";
+export type ImageApiMode = "images" | "responses";
+export type AgentApiMode = "off" | "native" | "hybrid";
 export type SystemChannelProtocol = "auto" | "openai" | "sub2api" | "globalaiopc" | "seedance" | "compatible";
 
 export type SystemChannelAdvancedConfig = {
@@ -43,6 +45,12 @@ export type AiConfig = {
     baseUrl: string;
     apiKey: string;
     apiFormat: ApiCallFormat;
+    apiMode: ImageApiMode;
+    streamImages: boolean;
+    streamPartialImages: number;
+    responseFormatB64Json: boolean;
+    codexCli: boolean;
+    requestTimeout: number;
     channels: ModelChannel[];
     model: string;
     imageModel: string;
@@ -66,10 +74,21 @@ export type AiConfig = {
     quality: string;
     size: string;
     count: string;
+    outputFormat: "png" | "jpeg" | "webp";
+    transparentBackground: boolean;
+    moderation: "auto" | "low" | "off";
+    outputCompression: string;
     canvasImageCount: string;
     modelPointCosts: Record<string, number>;
     generationPointMultipliers: GenerationPointMultipliers;
     generationConcurrency: GenerationConcurrencySettings;
+    agentApiMode: AgentApiMode;
+    agentTextModel: string;
+    agentImageModel: string;
+    agentMaxToolRounds: number;
+    agentWebSearch: boolean;
+    taskCompletionNotification: boolean;
+    agentAutoScroll: boolean;
     advancedConfig?: SystemChannelAdvancedConfig;
 };
 
@@ -117,7 +136,7 @@ migrateLocalStorageKey(CONFIG_STORE_KEY, legacyAppStorageKey("ai_config_store"))
 export type ModelCapability = "image" | "video" | "text" | "audio";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const DEFAULT_SYSTEM_BASE_URL = "";
-const CONFIG_STORE_VERSION = 3;
+const CONFIG_STORE_VERSION = 4;
 
 export const defaultConfig: AiConfig = {
     apiSource: "system",
@@ -125,6 +144,12 @@ export const defaultConfig: AiConfig = {
     baseUrl: DEFAULT_SYSTEM_BASE_URL,
     apiKey: "",
     apiFormat: "openai",
+    apiMode: "images",
+    streamImages: false,
+    streamPartialImages: 1,
+    responseFormatB64Json: true,
+    codexCli: false,
+    requestTimeout: 600,
     channels: [],
     model: "",
     imageModel: "",
@@ -148,6 +173,10 @@ export const defaultConfig: AiConfig = {
     quality: "auto",
     size: "1:1",
     count: "1",
+    outputFormat: "png",
+    transparentBackground: false,
+    moderation: "auto",
+    outputCompression: "100",
     canvasImageCount: "1",
     modelPointCosts: {},
     generationPointMultipliers: {
@@ -156,6 +185,13 @@ export const defaultConfig: AiConfig = {
         videoSeconds: { "-1": 1, "5": 1, "10": 1 },
     },
     generationConcurrency: { image: 4, video: 1 },
+    agentApiMode: "hybrid",
+    agentTextModel: "",
+    agentImageModel: "",
+    agentMaxToolRounds: 15,
+    agentWebSearch: false,
+    taskCompletionNotification: false,
+    agentAutoScroll: true,
 };
 
 export const defaultWebdavSyncConfig: WebdavSyncConfig = {
@@ -169,10 +205,12 @@ export const defaultWebdavSyncConfig: WebdavSyncConfig = {
 
 type ConfigStore = {
     config: AiConfig;
+    webdav: WebdavSyncConfig;
     isConfigOpen: boolean;
     shouldPromptContinue: boolean;
     setConfig: (config: AiConfig) => void;
     updateConfig: <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
+    updateWebdavConfig: <K extends keyof WebdavSyncConfig>(key: K, value: WebdavSyncConfig[K]) => void;
     isAiConfigReady: (config: AiConfig, model: string) => boolean;
     openConfigDialog: (shouldPromptContinue?: boolean) => void;
     setConfigDialogOpen: (isOpen: boolean) => void;
@@ -295,6 +333,7 @@ export const useConfigStore = create<ConfigStore>()(
     persist(
         (set, get) => ({
             config: defaultConfig,
+            webdav: defaultWebdavSyncConfig,
             isConfigOpen: false,
             shouldPromptContinue: false,
             setConfig: (config) => set({ config }),
@@ -305,18 +344,22 @@ export const useConfigStore = create<ConfigStore>()(
                         [key]: value,
                     },
                 })),
+            updateWebdavConfig: (key, value) =>
+                set((state) => ({
+                    webdav: {
+                        ...state.webdav,
+                        [key]: value,
+                    },
+                })),
             isAiConfigReady: (config, model) => isAiConfigReady(config, model),
-            openConfigDialog: (shouldPromptContinue = false) => {
-                if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("xsvo-system-config-missing", { detail: { shouldPromptContinue } }));
-                set({ isConfigOpen: false, shouldPromptContinue: false });
-            },
-            setConfigDialogOpen: () => set({ isConfigOpen: false, shouldPromptContinue: false }),
+            openConfigDialog: (shouldPromptContinue = false) => set({ isConfigOpen: true, shouldPromptContinue }),
+            setConfigDialogOpen: (isOpen) => set({ isConfigOpen: isOpen, shouldPromptContinue: isOpen ? get().shouldPromptContinue : false }),
             clearPromptContinue: () => set({ shouldPromptContinue: false }),
         }),
         {
             name: CONFIG_STORE_KEY,
             version: CONFIG_STORE_VERSION,
-            partialize: (state) => ({ config: state.config }),
+            partialize: (state) => ({ config: state.config, webdav: state.webdav }),
             migrate: (persisted, version) => {
                 const persistedState = (persisted || {}) as Partial<ConfigStore>;
                 const persistedConfig = (persistedState.config || {}) as Partial<AiConfig>;
@@ -328,11 +371,13 @@ export const useConfigStore = create<ConfigStore>()(
                     config.systemPrompt = "";
                     config.audioInstructions = "";
                 }
-                return { config };
+                const persistedWebdav = (persistedState.webdav || {}) as Partial<WebdavSyncConfig>;
+                return { config, webdav: { ...defaultWebdavSyncConfig, ...persistedWebdav } };
             },
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<ConfigStore>;
                 const persistedConfig = (persistedState.config || {}) as Partial<AiConfig>;
+                const webdav = { ...defaultWebdavSyncConfig, ...(persistedState.webdav || {}) };
                 const config = { ...defaultConfig, ...persistedConfig };
                 if (!Array.isArray(persistedConfig.channels)) config.channels = [];
                 const channels = normalizeChannels(config);
@@ -344,6 +389,7 @@ export const useConfigStore = create<ConfigStore>()(
                 const model = normalizeModelOptionValue(config.model, channels) || imageModel || textModel || videoModel || audioModel;
                 return {
                     ...current,
+                    webdav,
                     config: {
                         ...config,
                         apiSource: "system",

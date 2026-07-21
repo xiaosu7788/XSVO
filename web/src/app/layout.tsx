@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { AppProviders } from "@/components/layout/app-providers";
 import { getAuthSettings } from "@/lib/auth/store";
@@ -51,13 +50,6 @@ export default function RootLayout({
                     fontFamily: '"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif',
                 }}
             >
-                <Script
-                    id="theme-script"
-                    strategy="beforeInteractive"
-                    dangerouslySetInnerHTML={{
-                        __html: `try{var p="xsvo-main",l="in"+"finite-canvas";var s=JSON.parse(localStorage.getItem(p+":theme_store")||localStorage.getItem(l+":theme_store")||"{}");var t=s.version===1&&s.state&&s.state.theme?s.state.theme:"dark";document.documentElement.classList.toggle("dark",t==="dark");document.documentElement.style.colorScheme=t}catch(e){}`,
-                    }}
-                />
                 <AntdRegistry>
                     <AppProviders>{children}</AppProviders>
                 </AntdRegistry>

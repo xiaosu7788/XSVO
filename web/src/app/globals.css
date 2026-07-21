@@ -4423,3 +4423,1827 @@ html.dark .canvas-agent-confirm-switch.ant-switch.ant-switch-checked:hover:not(.
         max-width: 28vw;
     }
 }
+
+/* 生图工作台：选择器保持轻量、向上展开，避免 Ant Design 默认深色选中块。 */
+.native-image-workbench .image-workbench-select .ant-select-selector {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.86) !important;
+    border: 1px solid rgba(214, 211, 209, 0.78) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    color: #57534e;
+    min-height: 34px;
+    transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.native-image-workbench .image-workbench-select:hover .ant-select-selector,
+.native-image-workbench .image-workbench-select.ant-select-focused .ant-select-selector {
+    background: #ffffff !important;
+    border-color: rgba(96, 165, 250, 0.68) !important;
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.16) !important;
+}
+.image-workbench-select-dropdown.ant-select-dropdown {
+    border: 1px solid rgba(231, 229, 228, 0.96);
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(28, 25, 23, 0.13);
+    padding: 5px;
+}
+.image-workbench-select-dropdown .ant-select-item {
+    border-radius: 8px;
+    color: #57534e;
+    min-height: 34px;
+    padding: 7px 10px;
+    transition: background 140ms ease, color 140ms ease;
+}
+.image-workbench-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background: #f5f8ff;
+    color: #2563eb;
+}
+.image-workbench-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #edf4ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+.native-image-workbench .settings-tabs .ant-tabs-nav {
+    min-width: 170px;
+}
+.native-image-workbench .settings-tabs .ant-tabs-tab {
+    border-radius: 12px;
+    margin: 0 0 5px !important;
+    padding: 10px 12px;
+}
+.native-image-workbench .settings-tabs .ant-tabs-tab-active {
+    background: #f3f7ff;
+}
+.native-image-workbench .settings-tabs .ant-tabs-ink-bar {
+    display: none;
+}
+.dark .native-image-workbench .image-workbench-select .ant-select-selector {
+    background: rgba(28, 25, 23, 0.7) !important;
+    border-color: rgba(120, 113, 108, 0.6) !important;
+    color: #e7e5e4;
+}
+.dark .image-workbench-select-dropdown.ant-select-dropdown {
+    background: #1c1917;
+    border-color: #44403c;
+}
+.dark .image-workbench-select-dropdown .ant-select-item {
+    color: #d6d3d1;
+}
+.dark .image-workbench-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.dark .image-workbench-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: rgba(59, 130, 246, 0.12);
+    color: #bfdbfe;
+}
+
+.native-image-workbench .image-workbench-select {
+    min-width: 0;
+}
+
+.native-image-workbench .image-workbench-select-trigger {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(231, 229, 228, 0.9);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.035);
+    color: #44403c;
+    display: flex;
+    gap: 8px;
+    height: 32px;
+    justify-content: space-between;
+    padding: 0 12px;
+    text-align: left;
+    transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    width: 100%;
+}
+
+.native-image-workbench .image-workbench-select-trigger:hover,
+.native-image-workbench .image-workbench-select-trigger:focus-visible {
+    background: #ffffff;
+    border-color: rgba(191, 219, 254, 0.95);
+    box-shadow: 0 0 0 3px rgba(219, 234, 254, 0.85), 0 6px 18px rgba(28, 25, 23, 0.06);
+    outline: none;
+}
+
+.native-image-workbench .image-workbench-select-trigger:active {
+    transform: translateY(1px);
+}
+
+.image-workbench-select-menu {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(231, 229, 228, 0.98);
+    border-radius: 16px;
+    box-shadow: 0 16px 44px rgba(28, 25, 23, 0.12), 0 3px 10px rgba(28, 25, 23, 0.04);
+    left: 0;
+    max-height: min(248px, 38vh);
+    min-width: 100%;
+    overflow: auto;
+    padding: 6px;
+    position: fixed;
+    width: max-content;
+    z-index: 2100;
+    animation: image-workbench-menu-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: var(--menu-origin, bottom center);
+}
+
+.image-workbench-select-menu[data-placement="top"] {
+    --menu-origin: bottom center;
+}
+
+@keyframes image-workbench-menu-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.image-workbench-select-menu[data-placement="top"] {
+    animation-name: image-workbench-menu-in-top;
+}
+
+@keyframes image-workbench-menu-in-top {
+    from { opacity: 0; transform: translateY(calc(-100% + 4px)) scale(0.985); }
+    to { opacity: 1; transform: translateY(-100%) scale(1); }
+}
+
+.image-workbench-select-option {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 11px;
+    color: #44403c;
+    display: flex;
+    font-size: 0.875rem;
+    min-height: 38px;
+    min-width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    transition: background 140ms ease, color 140ms ease;
+    white-space: nowrap;
+}
+
+.image-workbench-select-option:hover {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected {
+    background: #edf5ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #60a5fa;
+    border-radius: 999px;
+    content: "";
+    height: 5px;
+    margin-right: 8px;
+    width: 5px;
+}
+
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    min-height: 0;
+}
+
+.image-workbench-settings-modal .settings-tabs,
+.image-workbench-settings-modal .settings-tabs .ant-tabs-content-holder,
+.image-workbench-settings-modal .settings-tabs .ant-tabs-content,
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tabpane {
+    min-height: 0;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    margin: 0;
+    padding: 18px 10px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-content-holder {
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    .image-workbench-settings-modal .ant-modal {
+        max-width: calc(100vw - 24px);
+    }
+
+    .image-workbench-settings-modal .ant-modal-body {
+        height: min(680px, calc(100vh - 130px)) !important;
+    }
+}
+
+.dark .native-image-workbench .image-workbench-select-trigger {
+    background: rgba(28, 25, 23, 0.7);
+    border-color: rgba(120, 113, 108, 0.6);
+    color: #e7e5e4;
+}
+
+.dark .native-image-workbench .image-workbench-select-trigger:hover,
+.dark .native-image-workbench .image-workbench-select-trigger:focus-visible {
+    background: rgba(41, 37, 36, 0.92);
+}
+
+.dark .image-workbench-select-menu {
+    background: rgba(28, 25, 23, 0.98);
+    border-color: #44403c;
+}
+
+.dark .image-workbench-select-option {
+    color: #d6d3d1;
+}
+
+.dark .image-workbench-select-option:hover,
+.dark .image-workbench-select-option.is-selected {
+    background: rgba(59, 130, 246, 0.12);
+    color: #bfdbfe;
+}
+
+
+.native-image-workbench .image-tip {
+    position: relative;
+}
+.native-image-workbench .image-tip::after {
+    background: rgba(28, 25, 23, 0.92);
+    border-radius: 9px;
+    bottom: calc(100% + 8px);
+    box-shadow: 0 10px 26px rgba(28, 25, 23, 0.16);
+    color: #fff;
+    content: attr(data-tip);
+    font-size: 12px;
+    left: 50%;
+    line-height: 1;
+    opacity: 0;
+    padding: 7px 9px;
+    pointer-events: none;
+    position: absolute;
+    transform: translate(-50%, 4px) scale(0.98);
+    transition: opacity 150ms ease, transform 150ms ease;
+    white-space: nowrap;
+    z-index: 80;
+}
+.native-image-workbench .image-tip:hover::after,
+.native-image-workbench .image-tip:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+.native-image-workbench [data-task-card] {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.native-image-workbench [data-task-card] p,
+.native-image-workbench [data-task-card] span {
+    user-select: none;
+    -webkit-user-select: none;
+}
+.native-image-workbench .image-workbench-select-trigger {
+    height: 36px;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(28, 25, 23, 0.04);
+}
+.image-workbench-select-menu {
+    border-color: rgba(229, 231, 235, 0.92);
+    border-radius: 14px;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.14), 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+.image-workbench-select-option {
+    color: #57534e;
+    font-weight: 400;
+    min-height: 36px;
+}
+.image-workbench-select-option:hover {
+    background: #f8fafc;
+    color: #2563eb;
+}
+.image-workbench-select-option.is-selected {
+    background: #f3f7ff;
+    color: #2563eb;
+    font-weight: 500;
+}
+.image-workbench-select-option.is-selected::before {
+    background: #93c5fd;
+    height: 4px;
+    width: 4px;
+}
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+.image-workbench-settings-modal .ant-modal-header {
+    border-bottom: 1px solid rgba(231, 229, 228, 0.7);
+    margin: 0;
+    padding: 20px 24px;
+}
+.image-workbench-settings-modal .ant-modal-close {
+    top: 18px;
+}
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 196px;
+}
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    color: #57534e;
+    font-size: 15px;
+    margin: 0 10px 8px !important;
+    padding: 12px 16px;
+}
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab-active {
+    background: #f8fbff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #2563eb;
+    font-weight: 600;
+}
+.image-workbench-detail-modal .ant-modal-content {
+    background: transparent;
+}
+@media (max-width: 900px) {
+    .native-image-workbench .grid.grid-cols-\[repeat\(6\,minmax\(0\,1fr\)\)_44px\] {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
+    }
+}
+
+/* Native image workbench refinements: match the original playground controls without relying on iframe injection. */
+.native-image-workbench .image-workbench-select-trigger {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(229, 231, 235, 0.95);
+    border-radius: 12px;
+    color: #57534e;
+    height: 34px;
+    padding-inline: 10px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.native-image-workbench .image-workbench-select-trigger:hover,
+.native-image-workbench .image-workbench-select-trigger:focus-visible {
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.16), 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.image-workbench-select-menu {
+    background: rgba(255, 255, 255, 0.985);
+    border-color: rgba(229, 231, 235, 0.94);
+    border-radius: 16px;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.14), 0 1px 2px rgba(15, 23, 42, 0.05);
+    padding: 6px;
+}
+
+.image-workbench-select-option {
+    border-radius: 11px;
+    color: #4b5563;
+    min-height: 38px;
+}
+
+.image-workbench-select-option:hover {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected {
+    background: #f6faff;
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #93c5fd;
+}
+
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(620px, calc(100vh - 120px)) !important;
+    overflow: hidden;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    margin: 0;
+    min-width: 178px;
+    padding: 16px 10px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    border-radius: 14px;
+    margin: 0 0 6px !important;
+    padding: 11px 12px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab-active {
+    background: #f3f7ff;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #2563eb;
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(24, 24, 27, 0.94);
+    border-radius: 10px;
+    bottom: calc(100% + 10px);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    line-height: 1.1;
+    padding: 7px 10px;
+    transform: translate(-50%, 4px) scale(0.98);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.native-image-workbench [data-task-card] {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+}
+
+.native-image-workbench [data-task-card] p,
+.native-image-workbench [data-task-card] span {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.native-image-workbench [data-task-card] button,
+.native-image-workbench [data-task-card] input,
+.native-image-workbench [data-task-card] textarea,
+.native-image-workbench [data-task-card] select {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+.native-image-workbench .image-workbench-composer {
+    width: min(820px, calc(100vw - 32px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(76px, 1fr)) 48px;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 52px;
+    }
+}
+
+/* 生图工作台最终收窄与原版轻量控件覆盖。 */
+.native-image-workbench .image-workbench-composer {
+    width: min(600px, calc(100vw - 32px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(58px, 1fr)) 42px;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input {
+    box-shadow: none !important;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input:focus,
+.native-image-workbench .image-workbench-composer .ant-input-focused {
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.14) !important;
+}
+
+.native-image-workbench .image-workbench-select-trigger {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(229, 231, 235, 0.96);
+    border-radius: 14px;
+    height: 36px;
+    padding-inline: 12px;
+}
+
+.image-workbench-select-menu {
+    background: rgba(255, 255, 255, 0.99);
+    border-color: rgba(229, 231, 235, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 6px;
+}
+
+.image-workbench-select-option {
+    border-radius: 11px;
+    color: #4b5563;
+    font-weight: 400;
+    min-height: 38px;
+}
+
+.image-workbench-select-option:hover {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected {
+    background: #f6faff;
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #bfdbfe;
+    height: 4px;
+    width: 4px;
+}
+
+.image-workbench-settings-modal .ant-modal-header {
+    padding: 16px 20px;
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(480px, calc(100vh - 120px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    min-width: 150px;
+    width: 150px;
+    padding: 14px 8px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    border-radius: 13px;
+    font-size: 14px;
+    margin: 0 0 6px !important;
+    padding: 10px 12px;
+}
+
+.image-workbench-detail-modal .ant-modal-content {
+    background: transparent;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(24, 24, 27, 0.94);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    font-size: 12px;
+    padding: 7px 10px;
+}
+
+.app-config-modal .ant-modal-content {
+    border-radius: 18px;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    border-color: rgba(229, 231, 235, 0.95) !important;
+    border-radius: 12px !important;
+    min-height: 40px;
+    padding-inline: 12px !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.app-config-modal .ant-select:hover .ant-select-selector,
+.app-config-modal .ant-select-focused .ant-select-selector {
+    border-color: rgba(148, 163, 184, 0.65) !important;
+    box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.7) !important;
+}
+
+.app-config-select-dropdown.ant-select-dropdown {
+    border: 1px solid rgba(229, 231, 235, 0.94);
+    border-radius: 14px;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.app-config-select-dropdown .ant-select-item {
+    border-radius: 10px;
+    min-height: 36px;
+}
+
+.app-config-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #f8fafc;
+    color: #1d4ed8;
+}
+
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #eff6ff;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 42px;
+    }
+}
+
+/* End-of-file final overrides for the native image workbench. */
+.native-image-workbench .image-workbench-composer {
+    width: min(520px, calc(100vw - 24px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 40px;
+    gap: 8px;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger,
+.app-config-modal .ant-select .ant-select-selector {
+    min-height: 34px;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-color: rgba(229, 231, 235, 0.95) !important;
+    box-shadow: none !important;
+}
+
+.image-workbench-select-menu,
+.app-config-select-dropdown.ant-select-dropdown {
+    border: 1px solid rgba(229, 231, 235, 0.95);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.985);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.image-workbench-select-option,
+.app-config-select-dropdown .ant-select-item {
+    min-height: 36px;
+    border-radius: 10px;
+    color: #57534e;
+}
+
+.image-workbench-select-option.is-selected,
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(17, 24, 39, 0.94);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    font-size: 12px;
+    padding: 7px 10px;
+}
+
+.image-workbench-settings-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(520px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 154px;
+    min-width: 154px;
+}
+
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+/* Native image workbench actual final override. Earlier blocks are kept for now; this last block owns the current UI. */
+.native-image-workbench .image-workbench-composer {
+    width: min(520px, calc(100vw - 24px));
+}
+
+.native-image-workbench .image-workbench-composer > div {
+    padding: 12px;
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 40px;
+    gap: 8px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 34px;
+    min-height: 34px;
+    border-radius: 12px;
+    padding-inline: 10px;
+    background: rgba(255, 255, 255, 0.97);
+    border-color: rgba(229, 231, 235, 0.95);
+    box-shadow: none;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input {
+    min-height: 38px !important;
+    box-shadow: none !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-tip::after {
+    border-radius: 10px;
+    background: rgba(17, 24, 39, 0.94);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    padding: 7px 10px;
+    font-size: 12px;
+}
+
+.image-workbench-select-menu {
+    border: 1px solid rgba(229, 231, 235, 0.95);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.985);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.image-workbench-select-option {
+    min-height: 36px;
+    border-radius: 10px;
+    color: #57534e;
+    font-weight: 400;
+}
+
+.image-workbench-select-option:hover {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: #93c5fd;
+    content: "";
+}
+
+.image-workbench-settings-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-settings-modal .ant-modal-content {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(520px, calc(100vh - 112px)) !important;
+    overflow: hidden;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 154px;
+    min-width: 154px;
+    padding: 14px 8px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    margin: 0 0 6px !important;
+    padding: 10px 12px;
+    border-radius: 13px;
+    font-size: 14px;
+}
+
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-detail-modal .ant-modal-content {
+    overflow: hidden;
+    border-radius: 22px;
+    background: transparent;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.native-image-workbench [data-task-card],
+.native-image-workbench [data-task-card] p,
+.native-image-workbench [data-task-card] span {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.native-image-workbench [data-task-card] button,
+.native-image-workbench [data-task-card] input,
+.native-image-workbench [data-task-card] textarea,
+.native-image-workbench [data-task-card] select {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+/* Native image workbench 2026-07-21 final sizing pass. */
+.native-image-workbench .image-workbench-composer {
+    width: min(860px, calc(100vw - 40px));
+}
+
+.native-image-workbench .image-workbench-composer > div {
+    padding: 14px 16px;
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(104px, 1fr)) 48px;
+    gap: 10px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 14px;
+    padding-inline: 12px;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input {
+    min-height: 46px !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-input-actions {
+    right: 14px !important;
+}
+
+.image-workbench-select-menu {
+    z-index: 1400;
+    padding: 7px;
+    overflow: visible;
+}
+
+.image-workbench-select-option {
+    min-height: 40px;
+    padding: 8px 12px;
+}
+
+.image-workbench-preview-modal .ant-modal {
+    max-width: calc(100vw - 32px);
+}
+
+.image-workbench-preview-modal .ant-modal-content {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+}
+
+.image-workbench-preview-modal .ant-modal-body {
+    overflow: visible;
+}
+
+.image-workbench-preview-modal img {
+    display: block;
+}
+
+.image-workbench-settings-modal .ant-modal {
+    max-width: calc(100vw - 32px);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(560px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    min-width: 166px;
+    width: 166px;
+    padding: 16px 10px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    margin: 0 0 8px !important;
+    padding: 11px 14px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    height: 48px;
+    min-height: 48px;
+    width: 100%;
+    border-radius: 14px;
+    padding-inline: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(229, 231, 235, 0.96);
+    box-shadow: none;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger:hover,
+.image-workbench-settings-modal .image-workbench-select-trigger:focus-visible {
+    border-color: rgba(203, 213, 225, 0.95);
+    box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.62);
+}
+
+.app-config-modal .ant-modal-content {
+    border-radius: 22px;
+}
+
+.app-config-modal .ant-tabs-content-holder {
+    min-width: 0;
+}
+
+.app-config-modal .ant-select,
+.app-config-modal .ant-input,
+.app-config-modal .ant-input-number,
+.app-config-modal textarea.ant-input {
+    width: 100%;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    min-height: 44px;
+    border-radius: 14px !important;
+    padding-inline: 14px !important;
+}
+
+.app-config-select-dropdown.ant-select-dropdown {
+    z-index: 1500;
+    border-radius: 15px;
+    padding: 7px;
+}
+
+.app-config-select-dropdown .ant-select-item {
+    min-height: 40px;
+    border-radius: 11px;
+    padding: 8px 12px;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer {
+        width: min(720px, calc(100vw - 28px));
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) 48px;
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row > :nth-last-child(2) {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 640px) {
+    .native-image-workbench .image-workbench-composer {
+        width: calc(100vw - 20px);
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 48px;
+    }
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 40px;
+    }
+}
+
+/* Actual EOF overrides for the native image workbench. */
+.native-image-workbench .image-workbench-composer {
+    width: min(860px, calc(100vw - 40px));
+}
+
+.native-image-workbench .image-workbench-composer > div {
+    padding: 14px 16px;
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(104px, 1fr)) 48px;
+    gap: 10px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 14px;
+    padding-inline: 12px;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input {
+    min-height: 46px !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-input-actions {
+    right: 14px !important;
+}
+
+.image-workbench-preview-modal .ant-modal-content {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+}
+
+.image-workbench-preview-modal .ant-modal-body {
+    overflow: visible;
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(560px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 166px;
+    min-width: 166px;
+    padding: 16px 10px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    height: 48px;
+    min-height: 48px;
+    width: 100%;
+    border-radius: 14px;
+    padding-inline: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(229, 231, 235, 0.96);
+    box-shadow: none;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger:hover,
+.image-workbench-settings-modal .image-workbench-select-trigger:focus-visible {
+    border-color: rgba(203, 213, 225, 0.95);
+    box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.62);
+}
+
+.image-workbench-select-menu {
+    z-index: 1400;
+    overflow: visible;
+    padding: 7px;
+}
+
+.image-workbench-select-option {
+    min-height: 40px;
+    padding: 8px 12px;
+}
+
+.app-config-modal .ant-modal-body {
+    max-height: min(68vh, calc(100dvh - 176px)) !important;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    min-height: 44px;
+    border-radius: 14px !important;
+    padding-inline: 14px !important;
+}
+
+.app-config-select-dropdown.ant-select-dropdown {
+    z-index: 1500;
+    border-radius: 15px;
+    padding: 7px;
+}
+
+.app-config-select-dropdown .ant-select-item {
+    min-height: 40px;
+    border-radius: 11px;
+    padding: 8px 12px;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer {
+        width: min(720px, calc(100vw - 28px));
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) 48px;
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row > :nth-last-child(2) {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 640px) {
+    .native-image-workbench .image-workbench-composer {
+        width: calc(100vw - 20px);
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 48px;
+    }
+}
+
+/* Native image workbench final polish pass. Keep the editor compact and the select/tooltip surfaces light. */
+.native-image-workbench .image-workbench-composer {
+    width: min(520px, calc(100vw - 24px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(52px, 1fr)) 40px;
+    gap: 0.5rem;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger,
+.app-config-modal .ant-select .ant-select-selector {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-color: rgba(229, 231, 235, 0.94) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    min-height: 34px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 34px;
+    padding-inline: 10px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger:hover,
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger:focus-visible,
+.app-config-modal .ant-select:hover .ant-select-selector,
+.app-config-modal .ant-select-focused .ant-select-selector {
+    border-color: rgba(147, 197, 253, 0.76) !important;
+    box-shadow: 0 0 0 3px rgba(219, 234, 254, 0.56) !important;
+}
+
+.image-workbench-select-menu,
+.app-config-select-dropdown.ant-select-dropdown {
+    background: rgba(255, 255, 255, 0.985);
+    border: 1px solid rgba(229, 231, 235, 0.95);
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.image-workbench-select-option,
+.app-config-select-dropdown .ant-select-item {
+    border-radius: 10px;
+    color: #57534e;
+    min-height: 36px;
+}
+
+.image-workbench-select-option:hover,
+.app-config-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected,
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #93c5fd;
+    border-radius: 999px;
+    content: "";
+    display: inline-block;
+    height: 4px;
+    width: 4px;
+}
+
+.image-workbench-settings-modal .ant-modal,
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(520px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    min-width: 154px;
+    width: 154px;
+    padding: 14px 8px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    border-radius: 13px;
+    margin: 0 0 6px !important;
+    padding: 10px 12px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab-active {
+    background: #f3f7ff;
+}
+
+.image-workbench-detail-modal .ant-modal-content {
+    background: transparent;
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(17, 24, 39, 0.94);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    font-size: 12px;
+    padding: 7px 10px;
+}
+
+.native-image-workbench [data-task-card] {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+}
+
+.native-image-workbench [data-task-card] p,
+.native-image-workbench [data-task-card] span {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.native-image-workbench [data-task-card] button,
+.native-image-workbench [data-task-card] input,
+.native-image-workbench [data-task-card] textarea,
+.native-image-workbench [data-task-card] select {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+}
+
+/* Native image workbench screenshot parity pass. */
+.native-image-workbench .image-workbench-composer {
+    width: min(560px, calc(100vw - 32px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(54px, 1fr)) 40px;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+}
+
+.native-image-workbench .image-workbench-composer .ant-input,
+.native-image-workbench .image-workbench-composer .ant-input-affix-wrapper,
+.native-image-workbench .image-workbench-composer input {
+    font-size: 14px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    border-radius: 13px;
+    height: 34px;
+    padding-inline: 10px;
+}
+
+.image-workbench-select-menu {
+    border-color: rgba(229, 231, 235, 0.96);
+    border-radius: 15px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.11), 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 6px;
+}
+
+.image-workbench-select-option {
+    border-radius: 10px;
+    min-height: 36px;
+}
+
+.image-workbench-select-option.is-selected {
+    background: #f5f9ff;
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #bfdbfe;
+    height: 4px;
+    width: 4px;
+}
+
+.image-workbench-settings-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(460px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    min-width: 138px;
+    width: 138px;
+    padding: 12px 8px;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-tab {
+    border-radius: 13px;
+    padding: 9px 11px;
+}
+
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 32px);
+}
+
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 22px;
+}
+
+.app-config-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.app-config-modal .ant-modal-body {
+    max-height: min(62vh, calc(100dvh - 180px)) !important;
+}
+
+.app-config-modal .ant-tabs-nav {
+    margin-bottom: 14px !important;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    border-color: rgba(229, 231, 235, 0.96) !important;
+    border-radius: 14px !important;
+    min-height: 40px;
+}
+
+.app-config-select-dropdown.ant-select-dropdown {
+    border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+}
+
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #f5f9ff;
+    color: #2563eb;
+    font-weight: 500;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 40px;
+    }
+}
+
+/* XSVO image workbench final override block */
+.native-image-workbench .image-workbench-composer {
+    width: min(520px, calc(100vw - 32px));
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 44px;
+    gap: 0.625rem;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger,
+.app-config-modal .ant-select .ant-select-selector {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-color: rgba(229, 231, 235, 0.95) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 34px;
+    padding-inline: 10px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger:hover,
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger:focus-visible,
+.app-config-modal .ant-select:hover .ant-select-selector,
+.app-config-modal .ant-select-focused .ant-select-selector {
+    border-color: rgba(147, 197, 253, 0.82) !important;
+    box-shadow: 0 0 0 3px rgba(219, 234, 254, 0.72) !important;
+}
+
+.image-workbench-select-menu,
+.app-config-select-dropdown.ant-select-dropdown {
+    background: rgba(255, 255, 255, 0.985);
+    border: 1px solid rgba(229, 231, 235, 0.95);
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.image-workbench-select-option,
+.app-config-select-dropdown .ant-select-item {
+    border-radius: 10px;
+    min-height: 36px;
+    color: #57534e;
+}
+
+.image-workbench-select-option:hover,
+.app-config-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background: #f8fbff;
+    color: #2563eb;
+}
+
+.image-workbench-select-option.is-selected,
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.image-workbench-select-option.is-selected::before {
+    background: #93c5fd;
+    border-radius: 999px;
+    content: "";
+    display: inline-block;
+    height: 4px;
+    width: 4px;
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(17, 24, 39, 0.94);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    font-size: 12px;
+    padding: 7px 10px;
+}
+
+.native-image-workbench [data-task-card] {
+    cursor: pointer;
+    user-select: none;
+}
+
+.native-image-workbench [data-task-card] p,
+.native-image-workbench [data-task-card] span {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.native-image-workbench [data-task-card] button,
+.native-image-workbench [data-task-card] input,
+.native-image-workbench [data-task-card] textarea,
+.native-image-workbench [data-task-card] select {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.app-config-modal .ant-modal {
+    max-width: calc(100vw - 20px);
+}
+
+.app-config-modal .ant-modal-content {
+    border-radius: 18px;
+}
+
+.app-config-modal .ant-modal-body {
+    max-height: min(58vh, calc(100dvh - 176px)) !important;
+}
+
+.app-config-modal .ant-tabs-nav {
+    margin-bottom: 12px !important;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 42px;
+    }
+}
+
+/* Latest native image workbench overrides: keep this block at the end of the file. */
+.native-image-workbench .image-workbench-composer {
+    width: min(520px, calc(100vw - 24px));
+}
+
+.native-image-workbench .image-workbench-composer > div {
+    padding: 12px;
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 40px;
+    gap: 8px;
+}
+
+.native-image-workbench .image-workbench-input-actions {
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger,
+.app-config-modal .ant-select .ant-select-selector {
+    min-height: 34px;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-color: rgba(229, 231, 235, 0.95) !important;
+    box-shadow: none !important;
+}
+
+.image-workbench-select-menu,
+.app-config-select-dropdown.ant-select-dropdown {
+    border: 1px solid rgba(229, 231, 235, 0.95);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.985);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+
+.image-workbench-select-option,
+.app-config-select-dropdown .ant-select-item {
+    min-height: 36px;
+    border-radius: 10px;
+    color: #57534e;
+}
+
+.image-workbench-select-option.is-selected,
+.app-config-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.native-image-workbench .image-tip::after {
+    background: rgba(17, 24, 39, 0.94);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    font-size: 12px;
+    padding: 7px 10px;
+}
+
+.image-workbench-settings-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.image-workbench-settings-modal .ant-modal-content,
+.image-workbench-detail-modal .ant-modal-content {
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(520px, calc(100vh - 112px)) !important;
+    overflow: hidden;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 154px;
+    min-width: 154px;
+}
+
+.image-workbench-detail-modal .ant-modal {
+    max-width: calc(100vw - 24px);
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 40px;
+    }
+}
+
+/* Actual EOF overrides for the native image workbench. */
+.native-image-workbench .image-workbench-composer {
+    width: min(860px, calc(100vw - 40px));
+}
+
+.native-image-workbench .image-workbench-composer > div {
+    padding: 14px 16px;
+}
+
+.native-image-workbench .image-workbench-composer .composer-row {
+    grid-template-columns: repeat(6, minmax(104px, 1fr)) 48px;
+    gap: 10px;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-select-trigger {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 14px;
+    padding-inline: 12px;
+}
+
+.native-image-workbench .image-workbench-composer .ant-input {
+    min-height: 46px !important;
+}
+
+.native-image-workbench .image-workbench-composer .image-workbench-input-actions {
+    right: 14px !important;
+}
+
+.image-workbench-preview-modal .ant-modal-content {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+}
+
+.image-workbench-preview-modal .ant-modal-body {
+    overflow: visible;
+}
+
+.image-workbench-settings-modal .ant-modal-body {
+    height: min(560px, calc(100vh - 112px)) !important;
+}
+
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 166px;
+    min-width: 166px;
+    padding: 16px 10px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    height: 48px;
+    min-height: 48px;
+    width: 100%;
+    border-radius: 14px;
+    padding-inline: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(229, 231, 235, 0.96);
+    box-shadow: none;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger:hover,
+.image-workbench-settings-modal .image-workbench-select-trigger:focus-visible {
+    border-color: rgba(203, 213, 225, 0.95);
+    box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.62);
+}
+
+.image-workbench-select-menu {
+    z-index: 1400;
+    overflow: visible;
+    padding: 7px;
+}
+
+.image-workbench-select-option {
+    min-height: 40px;
+    padding: 8px 12px;
+}
+
+.app-config-modal .ant-modal-body {
+    max-height: min(68vh, calc(100dvh - 176px)) !important;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    min-height: 44px;
+    border-radius: 14px !important;
+    padding-inline: 14px !important;
+}
+
+.app-config-select-dropdown.ant-select-dropdown {
+    z-index: 1500;
+    border-radius: 15px;
+    padding: 7px;
+}
+
+.app-config-select-dropdown .ant-select-item {
+    min-height: 40px;
+    border-radius: 11px;
+    padding: 8px 12px;
+}
+
+@media (max-width: 980px) {
+    .native-image-workbench .image-workbench-composer {
+        width: min(720px, calc(100vw - 28px));
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) 48px;
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row > :nth-last-child(2) {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 640px) {
+    .native-image-workbench .image-workbench-composer {
+        width: calc(100vw - 20px);
+    }
+
+    .native-image-workbench .image-workbench-composer .composer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 48px;
+    }
+}
+/* Selector alignment polish for the native workbench and settings modal. */
+.native-image-workbench .image-workbench-select-trigger,
+.image-workbench-settings-modal .image-workbench-select-trigger,
+.app-config-modal .ant-select .ant-select-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-left: 14px;
+    padding-right: 14px;
+    text-align: left;
+}
+
+.native-image-workbench .image-workbench-select-label,
+.image-workbench-settings-modal .image-workbench-select-trigger .ant-select-selection-item,
+.app-config-modal .ant-select .ant-select-selection-item,
+.app-config-modal .ant-select .ant-select-selection-placeholder {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+.native-image-workbench .image-workbench-select-chevron,
+.image-workbench-settings-modal .image-workbench-select-trigger .ant-select-arrow,
+.app-config-modal .ant-select .ant-select-arrow {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.app-config-modal .ant-select .ant-select-selector {
+    height: 44px;
+}
+
+.app-config-modal .ant-select .ant-select-selection-item,
+.app-config-modal .ant-select .ant-select-selection-placeholder {
+    line-height: 42px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    justify-content: space-between;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger .image-workbench-select-label {
+    text-align: left;
+}
+/* Settings modal compact width pass. */
+.image-workbench-settings-modal .settings-tabs .ant-tabs-nav {
+    width: 156px;
+    min-width: 156px;
+}
+
+.image-workbench-settings-modal .image-workbench-select {
+    max-width: 760px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    max-width: 760px;
+}
+/* Settings modal narrower selector and dropdown direction polish. */
+.image-workbench-settings-modal .image-workbench-select,
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    max-width: 600px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-trigger {
+    height: 46px;
+    min-height: 46px;
+}
+
+.image-workbench-settings-modal .image-workbench-select-label {
+    line-height: 1.35;
+}
+
+.image-workbench-select-menu[data-placement="bottom"] {
+    margin-top: 2px;
+}
+
+.image-workbench-select-option {
+    align-items: center;
+    line-height: 1.35;
+    padding-bottom: 10px;
+    padding-top: 10px;
+}
+/* Prevent workbench select option text from being vertically clipped. */
+.image-workbench-select-menu {
+    overflow: visible;
+}
+
+.image-workbench-select-option {
+    display: flex;
+    align-items: center;
+    min-height: 46px;
+    height: auto;
+    line-height: 1.5;
+    padding: 11px 14px;
+    overflow: visible;
+}
+
+.image-workbench-select-option > span {
+    display: block;
+    line-height: 1.5;
+    padding-bottom: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Keep workbench select options inside the rounded dropdown surface. */
+.image-workbench-select-menu {
+    max-height: min(320px, calc(100vh - 120px));
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+.image-workbench-select-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.image-workbench-select-menu::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(168, 162, 158, 0.45);
+}
