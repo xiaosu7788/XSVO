@@ -4766,7 +4766,7 @@ html.dark .canvas-agent-confirm-switch.ant-switch.ant-switch-checked:hover:not(.
     }
 }
 
-/* Native image workbench refinements: match the original playground controls without relying on iframe injection. */
+/* Native image workbench refinements: match the original playground controls. */
 .native-image-workbench .image-workbench-select-trigger {
     background: rgba(255, 255, 255, 0.94);
     border-color: rgba(229, 231, 235, 0.95);
