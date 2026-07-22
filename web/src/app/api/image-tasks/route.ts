@@ -36,6 +36,8 @@ type ImageApiResponse = {
     results?: unknown;
     content?: unknown;
     output?: unknown;
+    response?: unknown;
+    item?: unknown;
     code?: number;
     msg?: string;
 };
@@ -75,7 +77,7 @@ const IMAGE_MAX_EDGE = 3840;
 const IMAGE_MAX_RATIO = 3;
 const IMAGE_OUTPUT_FORMAT = "png";
 const TASK_HEARTBEAT_MS = 30 * 1000;
-const MODEL_REQUEST_TIMEOUT_MS = 3 * 60 * 1000;
+const DEFAULT_MODEL_REQUEST_TIMEOUT_MS = 3 * 60 * 1000;
 const IMAGE_TASK_POLL_INTERVAL_MS = 2500;
 const IMAGE_TASK_POLL_ATTEMPTS = 120;
 const MAX_INLINE_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -207,6 +209,7 @@ async function writeImageGenerationLog(task: ImageTask, status: "success" | "fai
 
 async function runOpenAiImageTask(task: ImageTask, origin: string, publicOrigin: string, cookie: string): Promise<ImageTaskRunResult> {
     const config = task.config;
+    if (config.apiMode === "responses") return runOpenAiResponsesImageTask(task, origin, cookie);
     const quality = normalizeQuality(config.quality || "");
     const requestSize = resolveRequestSize(quality, config.size || "auto");
     const path = await openAiImageTaskPath(config, task.kind);
@@ -244,7 +247,8 @@ async function runOpenAiImageTask(task: ImageTask, origin: string, publicOrigin:
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
                 response_format: responseFormat,
-                output_format: IMAGE_OUTPUT_FORMAT,
+                ...imageOutputParams(config),
+                ...(config.streamImages ? { stream: true, partial_images: streamPartialImages(config) } : {}),
             }),
             cache: "no-store",
         });
@@ -257,9 +261,7 @@ async function runOpenAiImageTask(task: ImageTask, origin: string, publicOrigin:
     }
 
     if (!response.ok) throw new Error(await readFetchError(response, "图片生成失败"));
-    const payload = (await response.json()) as ImageApiResponse;
-    const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || url;
-    const result = await parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, url);
+    const result = await parseOpenAiImageResponse(config, response, cookie, url);
     if (responseFormat === "url" && shouldRetryInternalImageUrlAsBase64(result)) return runOpenAiImageTaskWithBase64Response(task, origin, publicOrigin, cookie);
     return { ...result, pointsRemaining: readPointsRemaining(response.headers) };
 }
@@ -296,9 +298,7 @@ async function runOpenAiJsonImageEditTask(
             if (shouldFallbackToResponsesImage(response.status, message)) return runOpenAiResponsesImageTask(task, origin, cookie);
             throw new Error(message);
         }
-        const payload = (await response.json()) as ImageApiResponse;
-        const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || url;
-        const result = await parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, url);
+        const result = await parseOpenAiImageResponse(config, response, cookie, url);
         if (responseFormat === "url" && shouldRetryInternalImageUrlAsBase64(result)) return runOpenAiJsonImageEditTask(task, url, origin, publicOrigin, quality, requestSize, cookie, "b64_json");
         return { ...result, pointsRemaining: readPointsRemaining(response.headers) };
     }
@@ -331,9 +331,7 @@ async function runOpenAiImageTaskWithBase64Response(task: ImageTask, origin: str
             if (shouldFallbackToResponsesImage(response.status, message)) return runOpenAiResponsesImageTask(task, origin, cookie);
             throw new Error(message);
         }
-        const payload = (await response.json()) as ImageApiResponse;
-        const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || url;
-        const result = await parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, url);
+        const result = await parseOpenAiImageResponse(config, response, cookie, url);
         return { ...result, pointsRemaining: readPointsRemaining(response.headers) };
     }
 
@@ -348,7 +346,8 @@ async function runOpenAiImageTaskWithBase64Response(task: ImageTask, origin: str
             ...(quality ? { quality } : {}),
             ...(requestSize ? { size: requestSize } : {}),
             response_format: "b64_json",
-            output_format: IMAGE_OUTPUT_FORMAT,
+            ...imageOutputParams(config),
+            ...(config.streamImages ? { stream: true, partial_images: streamPartialImages(config) } : {}),
         }),
         cache: "no-store",
     });
@@ -357,9 +356,7 @@ async function runOpenAiImageTaskWithBase64Response(task: ImageTask, origin: str
         if (shouldFallbackToResponsesImage(response.status, message)) return runOpenAiResponsesImageTask(task, origin, cookie);
         throw new Error(message);
     }
-    const payload = (await response.json()) as ImageApiResponse;
-    const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || url;
-    return { ...(await parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, url)), pointsRemaining: readPointsRemaining(response.headers) };
+    return { ...(await parseOpenAiImageResponse(config, response, cookie, url)), pointsRemaining: readPointsRemaining(response.headers) };
 }
 
 async function runOpenAiResponsesImageTask(task: ImageTask, origin: string, cookie: string): Promise<ImageTaskRunResult> {
@@ -376,9 +373,7 @@ async function runOpenAiResponsesImageTask(task: ImageTask, origin: string, cook
             if (response.status === 400 || response.status === 422) continue;
             throw new Error(lastError);
         }
-        const payload = (await response.json()) as ImageApiResponse;
-        const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || url;
-        return { ...(await parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, url)), pointsRemaining: readPointsRemaining(response.headers) };
+        return { ...(await parseOpenAiImageResponse(config, response, cookie, url)), pointsRemaining: readPointsRemaining(response.headers) };
     }
 
     throw new Error(lastError || "图片生成失败");
@@ -392,7 +387,9 @@ function buildResponsesImageBodies(task: ImageTask, origin: string) {
         {
             model: task.config.model,
             input: [{ role: "user", content }],
-            tools: [{ type: "image_generation" }],
+            tools: [responsesImageTool(task.config, task.kind === "edit", responseRequestSize(task.config))],
+            tool_choice: "required",
+            ...(task.config.streamImages ? { stream: true } : {}),
         },
         {
             model: task.config.model,
@@ -401,7 +398,9 @@ function buildResponsesImageBodies(task: ImageTask, origin: string) {
         {
             model: task.config.model,
             input: prompt,
-            tools: [{ type: "image_generation" }],
+            tools: [responsesImageTool(task.config, task.kind === "edit", responseRequestSize(task.config))],
+            tool_choice: "required",
+            ...(task.config.streamImages ? { stream: true } : {}),
         },
         {
             model: task.config.model,
@@ -430,7 +429,8 @@ async function buildJsonImageEditBodies(
         ...(quality ? { quality } : {}),
         ...(requestSize ? { size: requestSize } : {}),
         response_format: responseFormat,
-        output_format: IMAGE_OUTPUT_FORMAT,
+        ...imageOutputParams(task.config),
+        ...(task.config.streamImages ? { stream: true, partial_images: streamPartialImages(task.config) } : {}),
         ...(mask ? { mask } : {}),
     };
     if (!images.length) return [base];
@@ -445,7 +445,9 @@ async function buildJsonImageEditBodies(
                 n: 1,
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
+                ...imageOutputParams(task.config),
                 ...(mask ? { mask } : {}),
+                ...(task.config.streamImages ? { stream: true, partial_images: streamPartialImages(task.config) } : {}),
                 image_urls: images,
             },
         ];
@@ -619,9 +621,18 @@ function sanitizeConfig(config?: ImageTaskConfig): ImageTaskConfig | null {
         baseUrl: config.baseUrl.trim(),
         apiKey: "system",
         apiFormat: config.apiFormat === "gemini" ? "gemini" : "openai",
+        apiMode: config.apiMode === "responses" ? "responses" : "images",
+        streamImages: Boolean(config.streamImages),
+        streamPartialImages: Math.max(0, Math.min(3, Number(config.streamPartialImages) || 0)),
+        responseFormatB64Json: config.responseFormatB64Json !== false,
+        requestTimeout: Math.max(30, Math.min(3600, Number(config.requestTimeout) || DEFAULT_MODEL_REQUEST_TIMEOUT_MS / 1000)),
         model: rawModelName(config.model),
         quality: config.quality || "auto",
         size: config.size || "auto",
+        outputFormat: config.outputFormat === "jpeg" || config.outputFormat === "webp" ? config.outputFormat : "png",
+        transparentBackground: Boolean(config.transparentBackground),
+        moderation: config.moderation === "low" || config.moderation === "off" ? config.moderation : "auto",
+        outputCompression: String(config.outputCompression || "100"),
         systemPrompt: "",
         advancedConfig: sanitizeAdvancedConfig(config.advancedConfig),
     };
@@ -658,6 +669,7 @@ function rawModelName(value: string) {
 }
 
 async function preferredImageResponseFormat(config: ImageTaskConfig): Promise<(typeof IMAGE_RESPONSE_FORMATS)[number]> {
+    if (config.responseFormatB64Json !== false) return "b64_json";
     const apiBase = await resolveConfiguredApiBaseUrl(config.baseUrl).catch(() => config.baseUrl);
     return isQingyanApiBase(apiBase) ? "b64_json" : "url";
 }
@@ -767,13 +779,47 @@ function taskHeaders(config: ImageTaskConfig, cookie: string) {
 }
 
 function taskFetch(config: ImageTaskConfig, url: string, init: RequestInit) {
+    const timeoutMs = Math.max(30, Math.min(3600, Number(config.requestTimeout) || DEFAULT_MODEL_REQUEST_TIMEOUT_MS / 1000)) * 1000;
     const nextInit = {
         ...init,
-        signal: init.signal || AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS),
+        signal: init.signal || AbortSignal.timeout(timeoutMs),
     };
     if (!isInternalApiBaseUrl(config.baseUrl)) return fetch(url, nextInit);
     if (typeof FormData !== "undefined" && nextInit.body instanceof FormData) return fetch(url, nextInit);
     return fetchInternalApi(url, nextInit);
+}
+
+function imageOutputParams(config: ImageTaskConfig) {
+    const outputCompression = Number(config.outputCompression);
+    return {
+        output_format: config.outputFormat || IMAGE_OUTPUT_FORMAT,
+        ...(config.transparentBackground ? { background: "transparent" } : {}),
+        ...(config.moderation && config.moderation !== "auto" ? { moderation: config.moderation } : {}),
+        ...(Number.isFinite(outputCompression) && outputCompression !== 100 ? { output_compression: outputCompression } : {}),
+    };
+}
+
+function streamPartialImages(config: ImageTaskConfig) {
+    return Math.max(0, Math.min(3, Math.floor(Number(config.streamPartialImages) || 0)));
+}
+
+function responseRequestSize(config: ImageTaskConfig) {
+    return resolveRequestSize(normalizeQuality(config.quality || ""), config.size || "auto");
+}
+
+function responsesImageTool(config: ImageTaskConfig, isEdit: boolean, requestSize?: string) {
+    const outputCompression = Number(config.outputCompression);
+    return {
+        type: "image_generation",
+        action: isEdit ? "edit" : "generate",
+        ...(requestSize ? { size: requestSize } : {}),
+        output_format: config.outputFormat || IMAGE_OUTPUT_FORMAT,
+        ...(config.quality && config.quality !== "auto" ? { quality: config.quality } : {}),
+        ...(config.moderation && config.moderation !== "auto" ? { moderation: config.moderation } : {}),
+        ...(config.transparentBackground ? { background: "transparent" } : {}),
+        ...(Number.isFinite(outputCompression) && outputCompression !== 100 ? { output_compression: outputCompression } : {}),
+        ...(config.streamImages ? { partial_images: streamPartialImages(config) } : {}),
+    };
 }
 
 function geminiHeaders(config: ImageTaskConfig, cookie: string) {
@@ -798,6 +844,85 @@ function parseImagePayload(payload: ImageApiResponse, baseUrl?: string) {
     const image = payload.data?.map((item) => resolveImageDataUrl(item, baseUrl)).find(Boolean);
     if (!image) throw new Error("接口没有返回图片");
     return image;
+}
+
+async function parseOpenAiImageResponse(config: ImageTaskConfig, response: Response, cookie: string, requestUrl: string) {
+    const resultBaseUrl = response.headers.get("x-vozeb-upstream-url") || requestUrl;
+    if (config.streamImages && isEventStreamResponse(response)) return parseImageStreamResponse(config, response, resultBaseUrl);
+    const payload = (await response.json()) as ImageApiResponse;
+    return parseImagePayloadOrPoll(config, payload, resultBaseUrl, cookie, requestUrl);
+}
+
+function isEventStreamResponse(response: Response) {
+    return (response.headers.get("content-type") || "").toLowerCase().includes("text/event-stream");
+}
+
+async function parseImageStreamResponse(config: ImageTaskConfig, response: Response, baseUrl: string): Promise<ImageTaskResult> {
+    const body = response.body;
+    if (!body) throw new Error("流式接口没有返回响应内容");
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    const state: { buffer: string; payloads: ImageApiResponse[]; lastError: string } = { buffer: "", payloads: [], lastError: "" };
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        consumeImageStreamText(state, decoder.decode(value, { stream: true }));
+    }
+    consumeImageStreamText(state, decoder.decode(), true);
+    if (state.lastError) throw new Error(state.lastError);
+    let lastParseError: unknown;
+    for (let index = state.payloads.length - 1; index >= 0; index -= 1) {
+        try {
+            const image = parseImagePayloadCompat(state.payloads[index], baseUrl, config);
+            if (image) return image;
+        } catch (error) {
+            lastParseError = error;
+        }
+    }
+    if (lastParseError instanceof Error) throw lastParseError;
+    throw new Error("流式接口未返回最终图片数据");
+}
+
+function consumeImageStreamText(state: { buffer: string; payloads: ImageApiResponse[]; lastError: string }, text: string, flush = false) {
+    state.buffer += text;
+    for (;;) {
+        const match = state.buffer.match(/\r?\n\r?\n/);
+        if (!match) break;
+        const index = match.index ?? 0;
+        consumeImageStreamBlock(state, state.buffer.slice(0, index));
+        state.buffer = state.buffer.slice(index + match[0].length);
+    }
+    if (flush && state.buffer.trim()) {
+        consumeImageStreamBlock(state, state.buffer);
+        state.buffer = "";
+    }
+}
+
+function consumeImageStreamBlock(state: { payloads: ImageApiResponse[]; lastError: string }, block: string) {
+    const data = block
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).replace(/^ /, ""))
+        .join("\n")
+        .trim();
+    if (!data || data === "[DONE]") return;
+    let event: ImageApiResponse;
+    try {
+        event = JSON.parse(data) as ImageApiResponse;
+    } catch {
+        state.lastError = "流式接口返回了无法解析的数据";
+        return;
+    }
+    const error = readImagePayloadError(event);
+    if (error) state.lastError = error;
+    const response = isRecord(event.response) ? (event.response as ImageApiResponse) : null;
+    const item = isRecord(event.item) ? event.item : null;
+    const type = stringField(event as Record<string, unknown>, "type");
+    if (response) state.payloads.push(response);
+    if (item && stringField(item, "type") === "image_generation_call") state.payloads.push({ output: [item] });
+    if (Array.isArray(event.output)) state.payloads.push(event);
+    if (type === "image_generation.completed" || type === "image_edit.completed") state.payloads.push({ data: [event as Record<string, unknown>] });
+    if (stringField(event as Record<string, unknown>, "object") === "image.generation.result" || stringField(event as Record<string, unknown>, "object") === "image.edit.result") state.payloads.push(event);
 }
 
 function resolveImageDataUrl(item: Record<string, unknown>, baseUrl?: string) {
@@ -934,6 +1059,35 @@ function readImagePayloadError(payload: ImageApiResponse) {
     if (payload.error?.message) return payload.error.message;
     const status = (payload.status || "").toLowerCase();
     if (["failed", "failure", "error", "cancelled", "canceled", "expired"].includes(status)) return payload.msg || "图片生成失败";
+    return findNestedImagePayloadError(payload);
+}
+
+function findNestedImagePayloadError(value: unknown, depth = 0): string {
+    if (!value || depth > 5) return "";
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const error = findNestedImagePayloadError(item, depth + 1);
+            if (error) return error;
+        }
+        return "";
+    }
+    if (!isRecord(value)) return "";
+    const error = value.error;
+    if (isRecord(error) && typeof error.message === "string" && error.message.trim()) return error.message.trim();
+    const status = findStringByOwnKeys(value, IMAGE_STATUS_KEYS).toLowerCase();
+    if (isFailedImageStatus(status)) return stringField(value, "msg") || stringField(value, "message") || "图片生成失败";
+    for (const key of IMAGE_CONTAINER_KEYS) {
+        const found = findNestedImagePayloadError(value[key], depth + 1);
+        if (found) return found;
+    }
+    return "";
+}
+
+function findStringByOwnKeys(record: Record<string, unknown>, keys: string[]) {
+    for (const key of keys) {
+        const value = stringField(record, key);
+        if (value) return value;
+    }
     return "";
 }
 
@@ -1229,7 +1383,15 @@ async function buildImageEditFormData(task: ImageTask, quality: string | undefin
     formData.set("prompt", withSystemPrompt(task.config, buildImageReferencePromptText(task.prompt, task.references)));
     formData.set("n", "1");
     formData.set("response_format", responseFormat);
-    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
+    const outputParams = imageOutputParams(task.config);
+    formData.set("output_format", outputParams.output_format);
+    if (outputParams.background) formData.set("background", String(outputParams.background));
+    if (outputParams.moderation) formData.set("moderation", String(outputParams.moderation));
+    if (outputParams.output_compression) formData.set("output_compression", String(outputParams.output_compression));
+    if (task.config.streamImages) {
+        formData.set("stream", "true");
+        formData.set("partial_images", String(streamPartialImages(task.config)));
+    }
     if (quality) formData.set("quality", quality);
     if (requestSize) formData.set("size", requestSize);
     const referenceFiles = await Promise.all(task.references.map((reference, index) => imageReferenceToFile(reference, reference.name || `reference-${index + 1}.png`, origin, cookie)));

@@ -11,9 +11,18 @@ export type ImageTaskConfig = {
     baseUrl: string;
     apiKey: string;
     apiFormat: "openai" | "gemini";
+    apiMode?: "images" | "responses";
+    streamImages?: boolean;
+    streamPartialImages?: number;
+    responseFormatB64Json?: boolean;
+    requestTimeout?: number;
     model: string;
     quality?: string;
     size?: string;
+    outputFormat?: "png" | "jpeg" | "webp";
+    transparentBackground?: boolean;
+    moderation?: "auto" | "low" | "off";
+    outputCompression?: string;
     systemPrompt?: string;
     advancedConfig?: SystemChannelAdvancedConfig;
 };

@@ -93,6 +93,8 @@ export type ImageGenerationTask = {
     status?: "pending" | "running" | "success" | "error";
 };
 
+type ImageGenerationResult = { id: string; dataUrl: string; remoteUrl?: string; serverUrl?: string };
+
 type ImageTaskPayload = {
     task?: ImageGenerationTask & {
         result?: { dataUrl?: string; remoteUrl?: string; serverUrl?: string };
@@ -645,6 +647,11 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             throw new Error(readAxiosError(error, "请求失败"));
         }
     }
+    if (requestConfig.apiSource === "system") {
+        const images = await requestOpenAiImageTasks(requestConfig, prompt, [], undefined, n, options);
+        await refreshUserPointsIfSystem(requestConfig.apiSource);
+        return images;
+    }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
     const requestUrl = aiApiUrl(requestConfig, "/images/generations");
@@ -691,9 +698,18 @@ export async function createImageGenerationTask(config: AiConfig, prompt: string
                     baseUrl: requestConfig.baseUrl,
                     apiKey: requestConfig.apiKey,
                     apiFormat: requestConfig.apiFormat,
+                    apiMode: requestConfig.apiMode,
+                    streamImages: requestConfig.streamImages,
+                    streamPartialImages: requestConfig.streamPartialImages,
+                    responseFormatB64Json: requestConfig.responseFormatB64Json,
+                    requestTimeout: requestConfig.requestTimeout,
                     model: requestConfig.model,
                     quality: requestConfig.quality,
                     size: requestConfig.size,
+                    outputFormat: requestConfig.outputFormat,
+                    transparentBackground: requestConfig.transparentBackground,
+                    moderation: requestConfig.moderation,
+                    outputCompression: requestConfig.outputCompression,
                     systemPrompt: "",
                     advancedConfig: requestConfig.advancedConfig,
                 },
@@ -715,6 +731,15 @@ export async function createImageGenerationTask(config: AiConfig, prompt: string
         if (!payload.task?.id) throw new Error(payload.error || "创建图片任务失败");
         return payload.task;
     }
+}
+
+async function requestOpenAiImageTasks(config: AiConfig, prompt: string, references: ReferenceImage[] = [], mask: ReferenceImage | undefined, count: number, options?: RequestOptions) {
+    const tasks = await Promise.all(Array.from({ length: Math.max(1, count) }, () => createImageGenerationTask({ ...config, count: "1" }, prompt, references, mask, options)));
+    const results = await Promise.allSettled(tasks.map((task) => waitForImageGenerationTask(config, task, options)));
+    const images = results.filter((item): item is PromiseFulfilledResult<ImageGenerationResult> => item.status === "fulfilled").map((item) => item.value);
+    if (images.length) return images;
+    const firstError = results.find((item): item is PromiseRejectedResult => item.status === "rejected");
+    throw firstError?.reason instanceof Error ? firstError.reason : new Error("图片生成失败");
 }
 
 async function referenceToTaskInput(reference: ReferenceImage) {
@@ -782,6 +807,11 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
             await refreshUserPointsIfSystem(requestConfig.apiSource);
             throw new Error(readAxiosError(error, "请求失败"));
         }
+    }
+    if (requestConfig.apiSource === "system") {
+        const images = await requestOpenAiImageTasks(requestConfig, prompt, references, mask, n, options);
+        await refreshUserPointsIfSystem(requestConfig.apiSource);
+        return images;
     }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
